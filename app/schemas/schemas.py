@@ -10,7 +10,7 @@ from app.models.models import AlertType, SubscriptionType
 
 class UserRegister(BaseModel):
     email: EmailStr
-    password: str = Field(min_length=8, max_length=100)
+    password: str = Field(min_length=8, max_length=72)
     full_name: Optional[str] = Field(default=None, max_length=255)
 
     @field_validator("password")

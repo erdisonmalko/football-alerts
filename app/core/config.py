@@ -30,5 +30,9 @@ class Settings(BaseSettings):
     def is_production(self) -> bool:
         return self.APP_ENV == "production"
 
+    @property
+    def is_development(self) -> bool:
+        return self.APP_ENV == "development"
+
 
 settings = Settings()

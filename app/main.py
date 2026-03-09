@@ -1,21 +1,43 @@
+import asyncio
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.exc import OperationalError
 
 from app.api.routes import admin, auth, football, users
 from app.core.config import settings
 from app.db.session import engine
 from app.models.models import Base  # noqa: F401 — ensures models are registered
 
+logger = logging.getLogger(__name__)
+
+
+async def _wait_for_db(retries: int = 10, delay: float = 3.0) -> None:
+    """
+    Retry the DB connection until Postgres is actually ready.
+    Docker healthcheck confirms the port is open, but the DB process
+    can still be initialising internally for a second or two after that.
+    """
+    for attempt in range(1, retries + 1):
+        try:
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            logger.info("Database ready — tables created/verified.")
+            return
+        except (OperationalError, OSError) as exc:
+            if attempt == retries:
+                raise RuntimeError(f"Could not connect to database after {retries} attempts") from exc
+            logger.warning(f"DB not ready yet (attempt {attempt}/{retries}), retrying in {delay}s…")
+            await asyncio.sleep(delay)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # On startup: create tables if they don't exist
-    # (In production, use Alembic migrations instead)
-    async with engine.begin() as conn:
-        if not settings.is_production:
-            await conn.run_sync(Base.metadata.create_all)
+    # On startup: wait for DB then create tables (dev only; use Alembic in prod)
+    if not settings.is_production:
+        await _wait_for_db()
     yield
     # On shutdown
     await engine.dispose()

@@ -22,6 +22,7 @@ async def get_user_by_id(db: AsyncSession, user_id: int) -> Optional[User]:
 
 
 async def create_user(db: AsyncSession, data: UserRegister) -> User:
+    print("Creating user with email:", hash_password(data.password))
     user = User(
         email=data.email,
         hashed_password=hash_password(data.password),
