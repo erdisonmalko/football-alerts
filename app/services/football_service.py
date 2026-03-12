@@ -24,6 +24,10 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 from app.core.config import settings
 
+from app.core.logger import _logger
+logger = _logger()
+
+
 # Human-readable metadata for the leagues we expose in the UI
 SUPPORTED_LEAGUES: list[dict] = [
     {"code": "PL",  "name": "Premier League",       "country": "England"},
@@ -45,6 +49,7 @@ class FootballDataClient:
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     async def _get(self, path: str, params: Optional[dict] = None) -> dict:
+        logger.debug(f"[FootballDataClient._get] Making API call to {path} with params {params}")
         async with httpx.AsyncClient(timeout=15.0) as client:
             response = await client.get(
                 f"{self.base_url}{path}",
@@ -56,11 +61,14 @@ class FootballDataClient:
 
     async def get_leagues(self) -> list[dict]:
         """Return hardcoded supported league metadata (no API call needed)."""
+        logger.debug("Fetching supported leagues.")
         return SUPPORTED_LEAGUES
 
     async def get_teams_by_league(self, league_code: str) -> list[dict]:
         """Fetch all teams in a given league for the current season."""
+        logger.debug(f"[FootballDataClient.get_teams_by_league] Fetching teams for league: {league_code}")
         data = await self._get(f"/competitions/{league_code}/teams")
+        logger.debug(f"[FootballDataClient.get_teams_by_league] Received {len(data.get('teams', []))} teams for league {league_code}")
         return [
             {
                 "id": team["id"],
@@ -92,6 +100,7 @@ class FootballDataClient:
                 "status": "SCHEDULED",
             },
         )
+        logger.debug(f"[FootballDataClient.get_upcoming_matches] Received {len(data.get('matches', []))} matches for league {league_code} between {date_from} and {date_to}")
         return self._normalize_matches(data.get("matches", []), league_code)
 
     async def get_upcoming_matches_by_team(
@@ -112,6 +121,7 @@ class FootballDataClient:
                 "status": "SCHEDULED",
             },
         )
+        logger.debug(f"[FootballDataClient.get_upcoming_matches_by_team] Received {len(data.get('matches', []))} matches for team {team_id} between {date_from} and {date_to}")
         return self._normalize_matches(data.get("matches", []))
 
     def _normalize_matches(self, raw: list[dict], league_code: str = "") -> list[dict]:
@@ -134,6 +144,7 @@ class FootballDataClient:
                     "status": m.get("status", "SCHEDULED"),
                 }
             )
+        logger.debug(f"[FootballDataClient._normalize_matches] Normalized {len(normalized)} matches for league {league_code}")
         return normalized
 
 

@@ -8,21 +8,24 @@ from app.core.security import hash_password
 from app.models.models import Subscription, User
 from app.schemas.schemas import SubscriptionCreate, UserRegister
 
-
+from app.core.logger import _logger
+logger = _logger()
 # ── Users ─────────────────────────────────────────────────────────────────────
 
 async def get_user_by_email(db: AsyncSession, email: str) -> Optional[User]:
+    logger.debug(f"[app.services.user_service.get_user_by_email] Fetching user by email: {email}")
     result = await db.execute(select(User).where(User.email == email))
     return result.scalar_one_or_none()
 
 
 async def get_user_by_id(db: AsyncSession, user_id: int) -> Optional[User]:
+    logger.debug(f"[app.services.user_service.get_user_by_id] Fetching user by ID: {user_id}")
     result = await db.execute(select(User).where(User.id == user_id))
     return result.scalar_one_or_none()
 
 
 async def create_user(db: AsyncSession, data: UserRegister) -> User:
-    print("Creating user with email:", hash_password(data.password))
+    logger.debug(f"[app.services.user_service.create_user] Creating user with email: {data.email}")
     user = User(
         email=data.email,
         hashed_password=hash_password(data.password),
@@ -30,6 +33,7 @@ async def create_user(db: AsyncSession, data: UserRegister) -> User:
     )
     db.add(user)
     await db.flush()  # get the id without committing
+    logger.info(f"[app.services.user_service.create_user] Created user with ID: {user.id} and email: {user.email}")
     return user
 
 
@@ -41,6 +45,7 @@ async def get_user_subscriptions(db: AsyncSession, user_id: int) -> list[Subscri
         .where(Subscription.user_id == user_id)
         .order_by(Subscription.created_at.desc())
     )
+    logger.debug(f"[app.services.user_service.get_user_subscriptions] Fetched {len(result.scalars().all())} subscriptions for user ID: {user_id}")
     return list(result.scalars().all())
 
 
@@ -57,6 +62,7 @@ async def create_subscription(
     )
     sub = existing.scalar_one_or_none()
     if sub:
+        logger.debug(f"[app.services.user_service.create_subscription] Subscription already exists for user ID: {user_id}, type: {data.subscription_type}, external ID: {data.external_id}")
         return sub
 
     sub = Subscription(
@@ -67,6 +73,7 @@ async def create_subscription(
     )
     db.add(sub)
     await db.flush()
+    logger.info(f"[app.services.user_service.create_subscription] Created subscription ID: {sub.id} for user ID: {user_id}, type: {data.subscription_type}, external ID: {data.external_id}")
     return sub
 
 
@@ -81,6 +88,8 @@ async def delete_subscription(
     )
     sub = result.scalar_one_or_none()
     if not sub:
+        logger.warning(f"[app.services.user_service.delete_subscription] Subscription ID: {subscription_id} not found for user ID: {user_id}")
         return False
     await db.delete(sub)
+    logger.info(f"[app.services.user_service.delete_subscription] Deleted subscription ID: {subscription_id} for user ID: {user_id}")
     return True

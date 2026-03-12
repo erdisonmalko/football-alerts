@@ -11,19 +11,24 @@ from app.db.session import get_db
 from app.models.models import AlertType
 from app.services.match_service import get_matches_due_for_alerts, sync_all_leagues
 
+from app.core.logger import _logger
+logger = _logger()
+
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
 def verify_admin_key(x_admin_key: str = Header(...)):
     if x_admin_key != settings.SECRET_KEY:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid admin key")
-
+    logger.info("[app.api.routes.admin] Admin key verified, proceeding with request.")
 
 @router.post("/sync-matches", dependencies=[Depends(verify_admin_key)])
 async def trigger_sync(db: AsyncSession = Depends(get_db)):
     """Manually trigger a match sync from football-data.org."""
+    logger.info("[app.api.routes.admin] Admin-triggered match sync started.")
     results = await sync_all_leagues(db)
     await db.commit()
+    logger.info(f"[app.api.routes.admin] Admin-triggered match sync completed.{len(results)} leagues synced.")
     return {"status": "ok", "synced": results}
 
 
@@ -31,6 +36,7 @@ async def trigger_sync(db: AsyncSession = Depends(get_db)):
 async def preview_alerts(db: AsyncSession = Depends(get_db)):
     """Preview which matches are in each alert window right now (dry run)."""
     preview = {}
+    logger.info("[app.api.routes.admin] Admin requested preview of upcoming alerts.")
     for alert_type in AlertType:
         matches = await get_matches_due_for_alerts(db, alert_type)
         preview[alert_type.value] = [
@@ -42,4 +48,5 @@ async def preview_alerts(db: AsyncSession = Depends(get_db)):
             }
             for m in matches
         ]
+    logger.info(f"[app.api.routes.admin] Previewing upcoming alerts: {preview}")
     return preview

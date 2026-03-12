@@ -1,5 +1,6 @@
 import asyncio
 import logging
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -11,7 +12,11 @@ from app.core.config import settings
 from app.db.session import engine
 from app.models.models import Base  # noqa: F401 — ensures models are registered
 
-logger = logging.getLogger(__name__)
+from app.core.logger import _logger
+
+logger = _logger()
+
+
 
 
 async def _wait_for_db(retries: int = 10, delay: float = 3.0) -> None:
