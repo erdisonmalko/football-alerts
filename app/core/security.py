@@ -1,5 +1,3 @@
-import logging
-
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -12,7 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.db.session import get_db
 
-logger = logging.getLogger(__name__)
+from app.core.logger import _logger
+logger = _logger()
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")

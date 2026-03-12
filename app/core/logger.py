@@ -1,7 +1,6 @@
 import logging
 import logging.config
 
-
 LOGGING_CONFIG = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -22,7 +21,6 @@ LOGGING_CONFIG = {
         "handlers": ["console"],
     },
     "loggers": {
-        # Silence noisy third-party loggers
         "sqlalchemy.engine": {"level": "WARNING"},
         "httpx": {"level": "WARNING"},
         "httpcore": {"level": "WARNING"},
@@ -30,6 +28,12 @@ LOGGING_CONFIG = {
     },
 }
 
-def _logger() -> logging.Logger:
+
+def setup_logging() -> None:
+    """Call once at app startup (in main.py lifespan)."""
     logging.config.dictConfig(LOGGING_CONFIG)
-    return logging.getLogger(__name__)
+
+
+def get_logger(name: str) -> logging.Logger:
+    """Get a named logger. setup_logging() must have been called first."""
+    return logging.getLogger(name)
