@@ -1,7 +1,6 @@
 import logging
 import logging.config
 
-
 LOGGING_CONFIG = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -22,7 +21,6 @@ LOGGING_CONFIG = {
         "handlers": ["console"],
     },
     "loggers": {
-        # Silence noisy third-party loggers
         "sqlalchemy.engine": {"level": "WARNING"},
         "httpx": {"level": "WARNING"},
         "httpcore": {"level": "WARNING"},
@@ -30,6 +28,9 @@ LOGGING_CONFIG = {
     },
 }
 
-def _logger() -> logging.Logger:
-    logging.config.dictConfig(LOGGING_CONFIG)
-    return logging.getLogger(__name__)
+# Runs once when this module is first imported — before any logger is requested
+logging.config.dictConfig(LOGGING_CONFIG)
+
+
+def get_logger(name: str) -> logging.Logger:
+    return logging.getLogger(name)

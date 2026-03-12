@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.models import AlertLog, AlertType, Match, Subscription, SubscriptionType
 from app.services.football_service import football_client, SUPPORTED_LEAGUES
 
-from app.core.logger import _logger
-logger = _logger()
+from app.core.logger import get_logger
+logger = get_logger(__name__)
 # ── Match Sync ────────────────────────────────────────────────────────────────
 
 async def sync_league_matches(db: AsyncSession, league_code: str) -> int:
@@ -147,4 +147,5 @@ async def record_alert_sent(
 ) -> None:
     log = AlertLog(user_id=user_id, match_id=match_id, alert_type=alert_type)
     db.add(log)
+    logger.info(f"Recorded alert sent for user {user_id}, match {match_id}, type {alert_type.value}.")
     await db.flush()

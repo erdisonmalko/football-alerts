@@ -12,9 +12,8 @@ from app.core.config import settings
 from app.db.session import engine
 from app.models.models import Base  # noqa: F401 — ensures models are registered
 
-from app.core.logger import _logger
-
-logger = _logger()
+from app.core.logger import get_logger
+logger = get_logger(__name__)
 
 
 
