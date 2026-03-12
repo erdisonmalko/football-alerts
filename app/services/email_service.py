@@ -5,8 +5,8 @@ from app.models.models import AlertType, Match, User
 
 resend.api_key = settings.RESEND_API_KEY
 
-from app.core.logger import _logger
-logger = _logger()
+from app.core.logger import get_logger
+logger = get_logger(__name__)
 
 
 # Alert type → human-readable label
@@ -80,7 +80,7 @@ async def send_match_alert(user: User, match: Match, alert_type: AlertType) -> b
         f"⚽ {match.home_team_name} vs {match.away_team_name} — "
         f"Kicks off in {label}!"
     )
-    logger.info(f"[app.service.email_service.send_match_alert] Sending '{label}' alert to {user.email} for match {match.id}")
+    logger.info(f"Sending '{label}' alert to {user.email} for match {match.id}")
     try:
         resend.Emails.send({
             "from": f"{settings.EMAIL_FROM_NAME} <{settings.EMAIL_FROM}>",
@@ -92,5 +92,5 @@ async def send_match_alert(user: User, match: Match, alert_type: AlertType) -> b
         return True
     except Exception as exc:
         # In production you'd log this properly
-        logger.error(f"[app.service.email_service.send_match_alert] Failed to send to {user.email}: {exc}")
+        logger.error(f"Failed to send to {user.email}: {exc}")
         return False

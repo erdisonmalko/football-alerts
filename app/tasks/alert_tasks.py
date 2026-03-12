@@ -10,8 +10,8 @@ import asyncio
 
 from app.tasks.celery_app import celery_app
 
-from app.core.logger import _logger
-logger = _logger()
+from app.core.logger import get_logger
+logger = get_logger(__name__)
 
 def run_async(coro):
     """Run an async coroutine from a sync Celery task."""
@@ -22,10 +22,10 @@ def run_async(coro):
 def sync_matches_task(self):
     """Syncs upcoming matches from football-data.org for all supported leagues."""
     try:
-        logger.info("[api.app.tasks.sync] Starting match sync task")
+        logger.info("Starting match sync task")
         run_async(_sync_matches())
     except Exception as exc:
-        logger.error(f"[api.app.tasks.sync] Match sync failed with error: {exc}")
+        logger.error(f"Match sync failed with error: {exc}")
         raise self.retry(exc=exc, countdown=60 * 5)  # retry after 5 min
 
 
@@ -33,10 +33,10 @@ def sync_matches_task(self):
 def dispatch_alerts_task(self):
     """Checks all alert windows and dispatches emails to subscribed users."""
     try:
-        logger.info("[api.app.tasks.alerts] Starting alert dispatch task")
+        logger.info("Starting alert dispatch task")
         run_async(_dispatch_alerts())
     except Exception as exc:
-        logger.error(f"[api.app.tasks.alerts] Alert dispatch failed with error: {exc}")
+        logger.error(f"Alert dispatch failed with error: {exc}")
         raise self.retry(exc=exc, countdown=60 * 2)
 
 
@@ -49,7 +49,7 @@ async def _sync_matches():
     async with AsyncSessionLocal() as db:
         results = await sync_all_leagues(db)
         await db.commit()
-        logger.info(f"[api.app.tasks._sync_matches] Match sync complete: {results}")
+        logger.info(f"Match sync complete: {results}")
 
 
 async def _dispatch_alerts():
@@ -67,7 +67,7 @@ async def _dispatch_alerts():
     async with AsyncSessionLocal() as db:
         for alert_type in AlertType:
             matches = await get_matches_due_for_alerts(db, alert_type)
-            logger.info(f"[api.app.tasks._dispatch_alerts] {alert_type.value}: {len(matches)} matches in window")
+            logger.info(f"{alert_type.value}: {len(matches)} matches in window")
 
             for match in matches:
                 user_ids = await get_subscribed_user_ids_for_match(db, match)
@@ -84,6 +84,6 @@ async def _dispatch_alerts():
                     success = await send_match_alert(user, match, alert_type)
                     if success:
                         await record_alert_sent(db, user_id, match.id, alert_type)
-                        logger.info(f"[api.app.tasks._dispatch_alerts] Sent {alert_type.value} alert → {user.email} for match {match.id}")
+                        logger.info(f"Sent {alert_type.value} alert → {user.email} for match {match.id}")
 
         await db.commit()

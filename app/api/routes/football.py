@@ -7,13 +7,13 @@ from app.services.football_service import SUPPORTED_LEAGUES, football_client
 
 router = APIRouter(prefix="/football", tags=["football"])
 
-from app.core.logger import _logger
-logger = _logger()
+from app.core.logger import get_logger
+logger = get_logger(__name__)
 
 @router.get("/leagues", response_model=list[LeagueOut])
 async def list_leagues(_: User = Depends(get_current_user)):
     """Returns all leagues available for subscription."""
-    logger.info("[app.api.routes.football.list_leagues] Fetching list of all leagues.")
+    logger.info("Fetching list of all leagues.")
     return await football_client.get_leagues()
 
 
@@ -23,13 +23,13 @@ async def list_teams(
     _: User = Depends(get_current_user),
 ):
     """Returns all teams in a league — use to subscribe to a specific team."""
-    logger.info(f"[app.api.routes.football.list_teams] Fetching teams for league: {league_code}")
+    logger.info(f"Fetching teams for league: {league_code}")
 
     valid_codes = {lg["code"] for lg in SUPPORTED_LEAGUES}
     if league_code.upper() not in valid_codes:
-        logger.warning(f"[app.api.routes.football.list_teams] Attempt to fetch teams for unsupported league code: {league_code}")
+        logger.warning(f"Attempt to fetch teams for unsupported league code: {league_code}")
         raise HTTPException(status_code=404, detail=f"League '{league_code}' not supported")
 
     teams = await football_client.get_teams_by_league(league_code.upper())
-    logger.info(f"[app.api.routes.football.list_teams] Retrieved teams for league: {league_code}")
+    logger.info(f"Retrieved teams for league: {league_code}")
     return teams

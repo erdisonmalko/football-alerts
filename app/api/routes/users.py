@@ -13,12 +13,12 @@ from app.services.user_service import (
 
 router = APIRouter(prefix="/users", tags=["users"])
 
-from app.core.logger import _logger
-logger = _logger()
+from app.core.logger import get_logger
+logger = get_logger(__name__)
 
 @router.get("/me", response_model=UserOut)
 async def get_me(current_user: User = Depends(get_current_user)):
-    logger.info(f"[app.api.routes.users.get_me] Fetching user info for: {current_user.email}")
+    logger.info(f"Fetching user info for: {current_user.email}")
     return current_user
 
 
@@ -32,7 +32,7 @@ async def update_me(
         current_user.full_name = data.full_name
     await db.commit()
     await db.refresh(current_user)
-    logger.info(f"[app.api.routes.users.update_me] Updated user info for: {current_user.email}(ID: {current_user.id})")
+    logger.info(f"Updated user info for: {current_user.email}(ID: {current_user.id})")
     return current_user
 
 
@@ -43,7 +43,7 @@ async def list_subscriptions(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):  
-    logger.info(f"[app.api.routes.users.list_subscriptions] Fetching subscriptions for user: {current_user.email}(ID: {current_user.id})")
+    logger.info(f"Fetching subscriptions for user: {current_user.email}(ID: {current_user.id})")
     return await get_user_subscriptions(db, current_user.id)
 
 
@@ -53,7 +53,7 @@ async def add_subscription(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    logger.info(f"[app.api.routes.users.add_subscription] Adding subscription for user: {current_user.email}(ID: {current_user.id}), league: {data.league_code}, team: {data.team_id}")
+    logger.info(f"Adding subscription for user: {current_user.email}(ID: {current_user.id}), league: {data.league_code}, team: {data.team_id}")
     sub = await create_subscription(db, current_user.id, data)
     await db.commit()
     await db.refresh(sub)
@@ -67,7 +67,6 @@ async def remove_subscription(
     db: AsyncSession = Depends(get_db),
 ):  
     logger.info(f"""
-    [app.api.routes.users.remove_subscription] 
     Removing subscription ID: {subscription_id} for user: {current_user.email}(ID: {current_user.id})
     """)
     deleted = await delete_subscription(db, current_user.id, subscription_id)

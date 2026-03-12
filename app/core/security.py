@@ -10,8 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.db.session import get_db
 
-from app.core.logger import _logger
-logger = _logger()
+from app.core.logger import get_logger
+logger = get_logger(__name__)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
@@ -23,12 +23,12 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def hash_password(password: str) -> str:
-    logger.debug(f"[app.core.security.hash_password] Hashing password.")
+    logger.debug(f"Hashing password.{password[:2]}***")
     return pwd_context.hash(password)
 
 
 def create_access_token(subject: str, expires_delta: Optional[timedelta] = None) -> str:
-    logger.debug(f"[app.core.security.create_access_token] Creating access token for user: {subject}")
+    logger.debug(f"Creating access token for user: {subject}")
     expire = datetime.now(timezone.utc) + (
         expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
@@ -40,10 +40,10 @@ def decode_access_token(token: str) -> Optional[str]:
     """Returns user_id (sub) or None if token is invalid."""
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        logger.debug(f"[app.core.security.decode_access_token] Decoded access token for user: {payload.get('sub')}")
+        logger.debug(f"Decoded access token for user: {payload.get('sub')}")
         return payload.get("sub")
     except JWTError:
-        logger.warning(f"[app.core.security.decode_access_token] Failed to decode access token: {token}")
+        logger.warning(f"Failed to decode access token: {token}")
         return None
 
 
@@ -53,7 +53,7 @@ async def get_current_user(
 ):
     """FastAPI dependency — returns the authenticated User model or raises 401."""
     from app.services.user_service import get_user_by_id  # avoid circular import
-    logger.debug(f"[app.core.security.get_current_user] Getting current user from token.")
+    logger.debug(f"Getting current user from token.")
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Invalid or expired token",
@@ -61,12 +61,12 @@ async def get_current_user(
     )
     user_id = decode_access_token(token)
     if not user_id:
-        logger.warning(f"[app.core.security.get_current_user] Failed to get current user — invalid token: {token}")
+        logger.warning(f"Failed to get current user — invalid token: {token}")
         raise credentials_exception
 
     user = await get_user_by_id(db, int(user_id))
     if not user or not user.is_active:
-        logger.warning(f"[app.core.security.get_current_user] Attempt to access protected resource with inactive user: {user_id}")
+        logger.warning(f"Attempt to access protected resource with inactive user: {user_id}")
         raise credentials_exception
-    logger.debug(f"[app.core.security.get_current_user] Successfully authenticated user: {user_id}")
+    logger.debug(f"Successfully authenticated user: {user_id}")
     return user

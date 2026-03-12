@@ -28,12 +28,9 @@ LOGGING_CONFIG = {
     },
 }
 
-
-def setup_logging() -> None:
-    """Call once at app startup (in main.py lifespan)."""
-    logging.config.dictConfig(LOGGING_CONFIG)
+# Runs once when this module is first imported — before any logger is requested
+logging.config.dictConfig(LOGGING_CONFIG)
 
 
 def get_logger(name: str) -> logging.Logger:
-    """Get a named logger. setup_logging() must have been called first."""
     return logging.getLogger(name)
