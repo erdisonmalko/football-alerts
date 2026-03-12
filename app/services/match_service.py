@@ -7,7 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.models import AlertLog, AlertType, Match, Subscription, SubscriptionType
 from app.services.football_service import football_client, SUPPORTED_LEAGUES
 
-
+from app.core.logger import _logger
+logger = _logger()
 # ── Match Sync ────────────────────────────────────────────────────────────────
 
 async def sync_league_matches(db: AsyncSession, league_code: str) -> int:
@@ -18,7 +19,7 @@ async def sync_league_matches(db: AsyncSession, league_code: str) -> int:
     """
     raw_matches = await football_client.get_upcoming_matches(league_code)
     count = 0
-
+    logger.info(f"Syncing {len(raw_matches)} matches for league {league_code}...")
     for m in raw_matches:
         existing = await db.execute(
             select(Match).where(Match.external_id == m["external_id"])
@@ -48,6 +49,7 @@ async def sync_league_matches(db: AsyncSession, league_code: str) -> int:
             count += 1
 
     await db.flush()
+    logger.info(f"Upserted {count} matches for league {league_code}.")
     return count
 
 
@@ -61,6 +63,8 @@ async def sync_all_leagues(db: AsyncSession) -> dict[str, int]:
             results[code] = count
         except Exception as exc:
             results[code] = -1  # mark failure but don't abort others
+            logger.error(f"Error occurred while syncing league {code}: {exc}")
+    logger.info(f"Finished syncing all leagues. Results: {results}")
     return results
 
 
@@ -95,6 +99,7 @@ async def get_matches_due_for_alerts(
             Match.status == "SCHEDULED",
         )
     )
+    logger.info(f"Found {result.rowcount} matches in alert window for {alert_type.value} alerts.")
     return list(result.scalars().all())
 
 
@@ -118,6 +123,7 @@ async def get_subscribed_user_ids_for_match(
             )
         ).distinct()
     )
+    logger.info(f"Found {len(result.scalars().all())} subscribed users for match {match.id}.")
     return list(result.scalars().all())
 
 
@@ -131,6 +137,8 @@ async def has_alert_been_sent(
             AlertLog.alert_type == alert_type,
         )
     )
+    logger.info(f"Checked alert status for user {user_id}, match {match_id}, type {alert_type.value}.")
+
     return result.scalar_one_or_none() is not None
 
 

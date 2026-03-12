@@ -13,9 +13,12 @@ from app.services.user_service import (
 
 router = APIRouter(prefix="/users", tags=["users"])
 
+from app.core.logger import _logger
+logger = _logger()
 
 @router.get("/me", response_model=UserOut)
 async def get_me(current_user: User = Depends(get_current_user)):
+    logger.info(f"[app.api.routes.get_me] Fetching user info for: {current_user.email}")
     return current_user
 
 
@@ -29,6 +32,7 @@ async def update_me(
         current_user.full_name = data.full_name
     await db.commit()
     await db.refresh(current_user)
+    logger.info(f"[app.api.routes.update_me] Updated user info for: {current_user.email}(ID: {current_user.id})")
     return current_user
 
 
@@ -38,20 +42,18 @@ async def update_me(
 async def list_subscriptions(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-):
+):  
+    logger.info(f"[app.api.routes.list_subscriptions] Fetching subscriptions for user: {current_user.email}(ID: {current_user.id})")
     return await get_user_subscriptions(db, current_user.id)
 
 
-@router.post(
-    "/me/subscriptions",
-    response_model=SubscriptionOut,
-    status_code=status.HTTP_201_CREATED,
-)
+@router.post("/me/subscriptions",response_model=SubscriptionOut,status_code=status.HTTP_201_CREATED)
 async def add_subscription(
     data: SubscriptionCreate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    logger.info(f"[app.api.routes.add_subscription] Adding subscription for user: {current_user.email}(ID: {current_user.id}), league: {data.league_code}, team: {data.team_id}")
     sub = await create_subscription(db, current_user.id, data)
     await db.commit()
     await db.refresh(sub)
@@ -63,7 +65,11 @@ async def remove_subscription(
     subscription_id: int,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-):
+):  
+    logger.info(f"""
+    [app.api.routes.remove_subscription] 
+    Removing subscription ID: {subscription_id} for user: {current_user.email}(ID: {current_user.id})
+    """)
     deleted = await delete_subscription(db, current_user.id, subscription_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
