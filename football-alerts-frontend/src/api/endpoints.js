@@ -33,6 +33,13 @@ export const addSubscription = (type, externalId, displayName) =>
 export const removeSubscription = (id) =>
   api.delete(`/users/me/subscriptions/${id}`)
 
+// Profile
+export const updateProfile = (data) =>
+  api.patch('/users/me', data).then(r => r.data)
+
+export const deleteAccount = () =>
+  api.delete('/users/me')
+
 // Upcoming matches (browse)
 export const getUpcomingMatches = (queryString = '') =>
   api.get(`/football/matches/upcoming${queryString}`).then(r => r.data)
