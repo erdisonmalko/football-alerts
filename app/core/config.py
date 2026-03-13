@@ -9,11 +9,11 @@ class Settings(BaseSettings):
     SECRET_KEY: str  # required — no default
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080
     ALGORITHM: str = "HS256"
-    ADMIN_KEY: str = 'update-me'  # required — no default
+    ADMIN_KEY: str = "update-me"  # required — no default
 
     # Database
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:password@localhost:5432/football_alerts_test"# required — no default
-    DATABASE_URL_SYNC: str = "postgresql://postgres:password@localhost:5432/football_alerts_test" # required — no default
+    DATABASE_URL: str = "postgresql+asyncpg://postgres:password@localhost:5432/football_alerts_test"  # required — no default
+    DATABASE_URL_SYNC: str = "postgresql://postgres:password@localhost:5432/football_alerts_test"  # required — no default
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
