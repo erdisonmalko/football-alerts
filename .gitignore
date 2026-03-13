@@ -1,6 +1,13 @@
 # ruff
 .ruff_cache/
 
+# celery
+celerybeat-schedule
+./celerybeat-schedule
+/celerybeat-schedule
+celerybeat.pid
+celerybeat.log
+celerybeat.err
 # Python
 __pycache__/
 *.py[cod]
