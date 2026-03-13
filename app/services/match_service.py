@@ -13,6 +13,7 @@ logger = get_logger(__name__)
 
 # ── Match Sync ────────────────────────────────────────────────────────────────
 
+
 async def sync_league_matches(db: AsyncSession, league_code: str) -> int:
     raw_matches = await football_client.get_upcoming_matches(league_code)
     count = 0
@@ -63,6 +64,7 @@ async def sync_all_leagues(db: AsyncSession) -> dict[str, int]:
 
 # ── Browse Upcoming Matches ───────────────────────────────────────────────────
 
+
 async def get_upcoming_matches_for_browse(
     db: AsyncSession,
     days_ahead: int = 14,
@@ -96,17 +98,20 @@ async def get_upcoming_matches_for_browse(
     # Paginated results
     offset = (page - 1) * page_size
     result = await db.execute(
-        select(Match).where(*filters).order_by(Match.kickoff_utc)
-        .offset(offset).limit(page_size)
+        select(Match)
+        .where(*filters)
+        .order_by(Match.kickoff_utc)
+        .offset(offset)
+        .limit(page_size)
     )
     matches = list(result.scalars().all())
-    logger.debug(f"Browse: page {page}/{-(-total // page_size)}, {len(matches)} matches (league={league_code})")
+    logger.debug(
+        f"Browse: page {page}/{-(-total // page_size)}, {len(matches)} matches (league={league_code})"
+    )
     return matches, total
 
 
-async def get_user_match_subscriptions(
-    db: AsyncSession, user_id: int
-) -> set[str]:
+async def get_user_match_subscriptions(db: AsyncSession, user_id: int) -> set[str]:
     """
     Returns the set of external_ids the user has MATCH subscriptions for.
     Used by the browse endpoint to mark already-subscribed matches.
@@ -121,6 +126,7 @@ async def get_user_match_subscriptions(
 
 
 # ── Cleanup ───────────────────────────────────────────────────────────────────
+
 
 async def cleanup_past_match_subscriptions(db: AsyncSession) -> int:
     """
@@ -140,10 +146,12 @@ async def cleanup_past_match_subscriptions(db: AsyncSession) -> int:
         return 0
 
     result = await db.execute(
-        delete(Subscription).where(
+        delete(Subscription)
+        .where(
             Subscription.subscription_type == SubscriptionType.MATCH,
             Subscription.external_id.in_(past_external_ids),
-        ).returning(Subscription.id)
+        )
+        .returning(Subscription.id)
     )
     deleted = len(result.scalars().all())
     if deleted:
@@ -154,9 +162,12 @@ async def cleanup_past_match_subscriptions(db: AsyncSession) -> int:
 # ── Alert Eligibility ─────────────────────────────────────────────────────────
 
 ALERT_WINDOWS: dict[AlertType, tuple[timedelta, timedelta]] = {
-    AlertType.ONE_WEEK:   (timedelta(days=6, hours=23), timedelta(days=7, hours=1)),
+    AlertType.ONE_WEEK: (timedelta(days=6, hours=23), timedelta(days=7, hours=1)),
     AlertType.THREE_DAYS: (timedelta(days=2, hours=23), timedelta(days=3, hours=1)),
-    AlertType.SIX_HOURS:  (timedelta(hours=5, minutes=30), timedelta(hours=6, minutes=30)),
+    AlertType.SIX_HOURS: (
+        timedelta(hours=5, minutes=30),
+        timedelta(hours=6, minutes=30),
+    ),
 }
 
 
@@ -167,7 +178,7 @@ async def get_matches_due_for_alerts(
     now = datetime.now(timezone.utc)
     min_delta, max_delta = ALERT_WINDOWS[alert_type]
     window_start = now + min_delta
-    window_end   = now + max_delta
+    window_end = now + max_delta
 
     result = await db.execute(
         select(Match).where(
@@ -177,7 +188,9 @@ async def get_matches_due_for_alerts(
         )
     )
     matches = list(result.scalars().all())
-    logger.info(f"Found {len(matches)} matches in alert window for {alert_type.value} alerts.")
+    logger.info(
+        f"Found {len(matches)} matches in alert window for {alert_type.value} alerts."
+    )
     return matches
 
 
@@ -192,20 +205,26 @@ async def get_subscribed_user_ids_for_match(
       - MATCH:  user subscribed directly to this specific match
     """
     result = await db.execute(
-        select(Subscription.user_id).where(
+        select(Subscription.user_id)
+        .where(
             (
-                (Subscription.subscription_type == SubscriptionType.LEAGUE) &
-                (Subscription.external_id == match.league_code)
-            ) | (
-                (Subscription.subscription_type == SubscriptionType.TEAM) &
-                (Subscription.external_id.in_([
-                    str(match.home_team_id), str(match.away_team_id)
-                ]))
-            ) | (
-                (Subscription.subscription_type == SubscriptionType.MATCH) &
-                (Subscription.external_id == str(match.external_id))
+                (Subscription.subscription_type == SubscriptionType.LEAGUE)
+                & (Subscription.external_id == match.league_code)
             )
-        ).distinct()
+            | (
+                (Subscription.subscription_type == SubscriptionType.TEAM)
+                & (
+                    Subscription.external_id.in_(
+                        [str(match.home_team_id), str(match.away_team_id)]
+                    )
+                )
+            )
+            | (
+                (Subscription.subscription_type == SubscriptionType.MATCH)
+                & (Subscription.external_id == str(match.external_id))
+            )
+        )
+        .distinct()
     )
     return list(result.scalars().all())
 

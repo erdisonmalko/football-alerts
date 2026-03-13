@@ -1,6 +1,4 @@
 import asyncio
-import logging
-import logging.config
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -14,7 +12,9 @@ from app.models.models import Base  # noqa: F401 — ensures models are register
 
 
 from app.core.logger import get_logger
+
 logger = get_logger(__name__)
+
 
 async def _wait_for_db(retries: int = 10, delay: float = 3.0) -> None:
     """
@@ -30,8 +30,12 @@ async def _wait_for_db(retries: int = 10, delay: float = 3.0) -> None:
             return
         except (OperationalError, OSError) as exc:
             if attempt == retries:
-                raise RuntimeError(f"Could not connect to database after {retries} attempts") from exc
-            logger.warning(f"DB not ready yet (attempt {attempt}/{retries}), retrying in {delay}s…")
+                raise RuntimeError(
+                    f"Could not connect to database after {retries} attempts"
+                ) from exc
+            logger.warning(
+                f"DB not ready yet (attempt {attempt}/{retries}), retrying in {delay}s…"
+            )
             await asyncio.sleep(delay)
 
 
@@ -70,10 +74,10 @@ app.add_middleware(
 
 # Register routers
 API_PREFIX = "/api/v1"
-app.include_router(auth.router,     prefix=API_PREFIX)
-app.include_router(users.router,    prefix=API_PREFIX)
+app.include_router(auth.router, prefix=API_PREFIX)
+app.include_router(users.router, prefix=API_PREFIX)
 app.include_router(football.router, prefix=API_PREFIX)
-app.include_router(admin.router,    prefix=API_PREFIX)
+app.include_router(admin.router, prefix=API_PREFIX)
 
 
 @app.get("/health", tags=["health"])

@@ -19,7 +19,9 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 
 def verify_admin_key(x_admin_key: str = Header(...)):
     if x_admin_key != settings.SECRET_KEY:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid admin key")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Invalid admin key"
+        )
     logger.info("Admin key verified.")
 
 

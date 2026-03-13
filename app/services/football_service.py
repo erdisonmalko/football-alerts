@@ -24,20 +24,21 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 from app.core.config import settings
 from app.core.logger import get_logger
+
 logger = get_logger(__name__)
 
 
 # Human-readable metadata for the leagues we expose in the UI
 SUPPORTED_LEAGUES: list[dict] = [
-    {"code": "PL",  "name": "Premier League",       "country": "England"},
-    {"code": "PD",  "name": "La Liga",               "country": "Spain"},
-    {"code": "SA",  "name": "Serie A",               "country": "Italy"},
-    {"code": "BL1", "name": "Bundesliga",            "country": "Germany"},
-    {"code": "FL1", "name": "Ligue 1",               "country": "France"},
-    {"code": "CL",  "name": "Champions League",      "country": "Europe"},
-    {"code": "EL",  "name": "Europa League",         "country": "Europe"},
-    {"code": "PPL", "name": "Primeira Liga",         "country": "Portugal"},
-    {"code": "DED", "name": "Eredivisie",            "country": "Netherlands"},
+    {"code": "PL", "name": "Premier League", "country": "England"},
+    {"code": "PD", "name": "La Liga", "country": "Spain"},
+    {"code": "SA", "name": "Serie A", "country": "Italy"},
+    {"code": "BL1", "name": "Bundesliga", "country": "Germany"},
+    {"code": "FL1", "name": "Ligue 1", "country": "France"},
+    {"code": "CL", "name": "Champions League", "country": "Europe"},
+    {"code": "EL", "name": "Europa League", "country": "Europe"},
+    {"code": "PPL", "name": "Primeira Liga", "country": "Portugal"},
+    {"code": "DED", "name": "Eredivisie", "country": "Netherlands"},
 ]
 
 
@@ -46,9 +47,13 @@ class FootballDataClient:
         self.base_url = settings.FOOTBALL_DATA_BASE_URL
         self.headers = {"X-Auth-Token": settings.FOOTBALL_DATA_API_KEY}
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+    @retry(
+        stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10)
+    )
     async def _get(self, path: str, params: Optional[dict] = None) -> dict:
-        logger.debug(f"[FootballDataClient._get] Making API call to {path} with params {params}")
+        logger.debug(
+            f"[FootballDataClient._get] Making API call to {path} with params {params}"
+        )
         async with httpx.AsyncClient(timeout=15.0) as client:
             response = await client.get(
                 f"{self.base_url}{path}",
@@ -65,9 +70,13 @@ class FootballDataClient:
 
     async def get_teams_by_league(self, league_code: str) -> list[dict]:
         """Fetch all teams in a given league for the current season."""
-        logger.debug(f"[FootballDataClient.get_teams_by_league] Fetching teams for league: {league_code}")
+        logger.debug(
+            f"[FootballDataClient.get_teams_by_league] Fetching teams for league: {league_code}"
+        )
         data = await self._get(f"/competitions/{league_code}/teams")
-        logger.debug(f"[FootballDataClient.get_teams_by_league] Received {len(data.get('teams', []))} teams for league {league_code}")
+        logger.debug(
+            f"[FootballDataClient.get_teams_by_league] Received {len(data.get('teams', []))} teams for league {league_code}"
+        )
         return [
             {
                 "id": team["id"],
@@ -99,7 +108,9 @@ class FootballDataClient:
                 "status": "SCHEDULED",
             },
         )
-        logger.debug(f"[FootballDataClient.get_upcoming_matches] Received {len(data.get('matches', []))} matches for league {league_code} between {date_from} and {date_to}")
+        logger.debug(
+            f"[FootballDataClient.get_upcoming_matches] Received {len(data.get('matches', []))} matches for league {league_code} between {date_from} and {date_to}"
+        )
         return self._normalize_matches(data.get("matches", []), league_code)
 
     async def get_upcoming_matches_by_team(
@@ -120,7 +131,9 @@ class FootballDataClient:
                 "status": "SCHEDULED",
             },
         )
-        logger.debug(f"[FootballDataClient.get_upcoming_matches_by_team] Received {len(data.get('matches', []))} matches for team {team_id} between {date_from} and {date_to}")
+        logger.debug(
+            f"[FootballDataClient.get_upcoming_matches_by_team] Received {len(data.get('matches', []))} matches for team {team_id} between {date_from} and {date_to}"
+        )
         return self._normalize_matches(data.get("matches", []))
 
     def _normalize_matches(self, raw: list[dict], league_code: str = "") -> list[dict]:
@@ -143,7 +156,9 @@ class FootballDataClient:
                     "status": m.get("status", "SCHEDULED"),
                 }
             )
-        logger.debug(f"[FootballDataClient._normalize_matches] Normalized {len(normalized)} matches for league {league_code}")
+        logger.debug(
+            f"[FootballDataClient._normalize_matches] Normalized {len(normalized)} matches for league {league_code}"
+        )
         return normalized
 
 

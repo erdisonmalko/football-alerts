@@ -2,18 +2,18 @@ from datetime import datetime
 import resend
 from app.core.config import settings
 from app.models.models import AlertType, Match, User
+from app.core.logger import get_logger
 
 resend.api_key = settings.RESEND_API_KEY
 
-from app.core.logger import get_logger
 logger = get_logger(__name__)
 
 
 # Alert type → human-readable label
 ALERT_LABELS: dict[AlertType, str] = {
-    AlertType.ONE_WEEK:   "1 week",
+    AlertType.ONE_WEEK: "1 week",
     AlertType.THREE_DAYS: "3 days",
-    AlertType.SIX_HOURS:  "6 hours",
+    AlertType.SIX_HOURS: "6 hours",
 }
 
 
@@ -77,18 +77,21 @@ async def send_match_alert(user: User, match: Match, alert_type: AlertType) -> b
     """
     label = ALERT_LABELS[alert_type]
     subject = (
-        f"⚽ {match.home_team_name} vs {match.away_team_name} — "
-        f"Kicks off in {label}!"
+        f"⚽ {match.home_team_name} vs {match.away_team_name} — Kicks off in {label}!"
     )
     logger.info(f"Sending '{label}' alert to {user.email} for match {match.id}")
     try:
-        resend.Emails.send({
-            "from": f"{settings.EMAIL_FROM_NAME} <{settings.EMAIL_FROM}>",
-            "to": [user.email],
-            "subject": subject,
-            "html": _build_email_html(match, alert_type, user),
-        })
-        logger.info(f"[app.service.send_match_alert] Successfully sent '{label}' alert to {user.email} for match {match.id}")
+        resend.Emails.send(
+            {
+                "from": f"{settings.EMAIL_FROM_NAME} <{settings.EMAIL_FROM}>",
+                "to": [user.email],
+                "subject": subject,
+                "html": _build_email_html(match, alert_type, user),
+            }
+        )
+        logger.info(
+            f"[app.service.send_match_alert] Successfully sent '{label}' alert to {user.email} for match {match.id}"
+        )
         return True
     except Exception as exc:
         # In production you'd log this properly

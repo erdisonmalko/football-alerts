@@ -16,7 +16,9 @@ def run_async(coro):
     return asyncio.get_event_loop().run_until_complete(coro)
 
 
-@celery_app.task(name="app.tasks.alert_tasks.sync_matches_task", bind=True, max_retries=3)
+@celery_app.task(
+    name="app.tasks.alert_tasks.sync_matches_task", bind=True, max_retries=3
+)
 def sync_matches_task(self):
     """Syncs upcoming matches from football-data.org for all supported leagues."""
     try:
@@ -25,7 +27,9 @@ def sync_matches_task(self):
         raise self.retry(exc=exc, countdown=60 * 5)  # retry after 5 min
 
 
-@celery_app.task(name="app.tasks.alert_tasks.dispatch_alerts_task", bind=True, max_retries=3)
+@celery_app.task(
+    name="app.tasks.alert_tasks.dispatch_alerts_task", bind=True, max_retries=3
+)
 def dispatch_alerts_task(self):
     """Checks all alert windows and dispatches emails to subscribed users."""
     try:
@@ -36,9 +40,13 @@ def dispatch_alerts_task(self):
 
 # ── Async implementations ─────────────────────────────────────────────────────
 
+
 async def _sync_matches():
     from app.db.session import AsyncSessionLocal
-    from app.services.match_service import sync_all_leagues, cleanup_past_match_subscriptions
+    from app.services.match_service import (
+        sync_all_leagues,
+        cleanup_past_match_subscriptions,
+    )
 
     async with AsyncSessionLocal() as db:
         results = await sync_all_leagues(db)
@@ -70,7 +78,9 @@ async def _dispatch_alerts():
                 user_ids = await get_subscribed_user_ids_for_match(db, match)
 
                 for user_id in user_ids:
-                    already_sent = await has_alert_been_sent(db, user_id, match.id, alert_type)
+                    already_sent = await has_alert_been_sent(
+                        db, user_id, match.id, alert_type
+                    )
                     if already_sent:
                         continue
 
@@ -81,6 +91,8 @@ async def _dispatch_alerts():
                     success = await send_match_alert(user, match, alert_type)
                     if success:
                         await record_alert_sent(db, user_id, match.id, alert_type)
-                        print(f"[alerts] Sent {alert_type.value} alert → {user.email} for match {match.id}")
+                        print(
+                            f"[alerts] Sent {alert_type.value} alert → {user.email} for match {match.id}"
+                        )
 
         await db.commit()

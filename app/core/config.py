@@ -1,33 +1,34 @@
-import os
-
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from dotenv import load_dotenv
-load_dotenv()
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     # App
     APP_ENV: str = "development"
-    SECRET_KEY: str = os.getenv("SECRET_KEY")
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080  # 7 days
+    SECRET_KEY: str  # required — no default
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080
     ALGORITHM: str = "HS256"
+    ADMIN_KEY: str = "update-me"  # required — no default
 
     # Database
-    DATABASE_URL: str = os.getenv("DATABASE_URL")
-    DATABASE_URL_SYNC: str = os.getenv("DATABASE_URL_SYNC")
+    DATABASE_URL: str = "postgresql+asyncpg://postgres:password@localhost:5432/football_alerts_test"  # required — no default
+    DATABASE_URL_SYNC: str = "postgresql://postgres:password@localhost:5432/football_alerts_test"  # required — no default
 
     # Redis
-    REDIS_URL: str = os.getenv("REDIS_URL")
+    REDIS_URL: str = "redis://localhost:6379/0"
 
     # Football Data API
-    FOOTBALL_DATA_API_KEY: str = os.getenv("FOOTBALL_DATA_API_KEY")
+    FOOTBALL_DATA_API_KEY: str = ""
     FOOTBALL_DATA_BASE_URL: str = "https://api.football-data.org/v4"
 
     # Email
     RESEND_API_KEY: str = ""
-    EMAIL_FROM: str = "alerts@yourdomain.com"
+    EMAIL_FROM: str = "onboarding@resend.dev"
     EMAIL_FROM_NAME: str = "Football Alerts"
+
+    # CORS
+    FRONTEND_URL: str = "http://localhost:5173"
 
     @property
     def is_production(self) -> bool:
