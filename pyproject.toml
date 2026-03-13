@@ -12,4 +12,5 @@ env = [
     "RESEND_API_KEY=test",
     "EMAIL_FROM=test@test.com",
     "FRONTEND_URL=http://localhost:5173",
+    RAILWAY_TOKEN=0d45be3f-332d-41b1-90be-edab8461aa72
 ]
