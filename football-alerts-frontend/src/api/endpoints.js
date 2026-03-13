@@ -8,14 +8,16 @@ export const login = async (email, password) => {
   const form = new URLSearchParams()
   form.append('username', email)
   form.append('password', password)
+  // Returns the user object directly; cookie is set by the server
   const res = await api.post('/auth/login', form, {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
   })
   return res.data
 }
 
-// User
-export const getMe = () => api.get('/users/me').then(r => r.data)
+export const logout = () => api.post('/auth/logout')
+
+export const getMe = () => api.get('/auth/me').then(r => r.data)
 
 // Subscriptions
 export const getSubscriptions = () =>

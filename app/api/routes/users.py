@@ -53,7 +53,7 @@ async def add_subscription(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    logger.info(f"Adding subscription for user: {current_user.email}(ID: {current_user.id}), league: {data.league_code}, team: {data.team_id}")
+    logger.info(f"Adding subscription for user: {current_user.email}(ID: {current_user.id})")
     sub = await create_subscription(db, current_user.id, data)
     await db.commit()
     await db.refresh(sub)

@@ -23,6 +23,7 @@ class AlertType(str, enum.Enum):
 class SubscriptionType(str, enum.Enum):
     LEAGUE = "league"
     TEAM   = "team"
+    MATCH  = "match"
 
 
 # ── User ──────────────────────────────────────────────────────────────────────
@@ -54,7 +55,7 @@ class User(Base):
 # ── Subscription ──────────────────────────────────────────────────────────────
 
 class Subscription(Base):
-    """A user subscribing to alerts for either a whole league or a specific team."""
+    """A user subscribing to alerts for a whole league, a specific team, or a one-off match."""
     __tablename__ = "subscriptions"
     __table_args__ = (
         UniqueConstraint("user_id", "subscription_type", "external_id", name="uq_user_subscription"),
@@ -63,7 +64,7 @@ class Subscription(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     subscription_type: Mapped[SubscriptionType] = mapped_column(
-        Enum(SubscriptionType), nullable=False
+        Enum(SubscriptionType, values_callable=lambda x: [e.value for e in x]), nullable=False
     )
     # ID from football-data.org (e.g. league code "PL", or team id 64)
     external_id: Mapped[str] = mapped_column(String(50), nullable=False)
@@ -130,7 +131,7 @@ class AlertLog(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     match_id: Mapped[int] = mapped_column(ForeignKey("matches.id", ondelete="CASCADE"), nullable=False)
-    alert_type: Mapped[AlertType] = mapped_column(Enum(AlertType), nullable=False)
+    alert_type: Mapped[AlertType] = mapped_column(Enum(AlertType, values_callable=lambda x: [e.value for e in x]), nullable=False)
     sent_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

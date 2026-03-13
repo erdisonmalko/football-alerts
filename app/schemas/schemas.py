@@ -85,6 +85,11 @@ class MatchOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class MatchOutWithSubscribed(MatchOut):
+    """MatchOut extended with a flag showing if the current user is subscribed."""
+    is_subscribed: bool = False
+
+
 # ── Leagues & Teams (from football-data.org) ──────────────────────────────────
 
 class LeagueOut(BaseModel):

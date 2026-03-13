@@ -1,6 +1,6 @@
 import asyncio
 import logging
-
+import logging.config
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -12,11 +12,9 @@ from app.core.config import settings
 from app.db.session import engine
 from app.models.models import Base  # noqa: F401 — ensures models are registered
 
+
 from app.core.logger import get_logger
 logger = get_logger(__name__)
-
-
-
 
 async def _wait_for_db(retries: int = 10, delay: float = 3.0) -> None:
     """
@@ -54,10 +52,17 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — tighten origins in production
+# CORS — allow_origins must be explicit (never "*") when allow_credentials=True,
+# otherwise the browser refuses to send cookies on cross-origin requests.
+ALLOWED_ORIGINS = (
+    ["https://yourdomain.com"]
+    if settings.is_production
+    else ["http://localhost:5173", "http://127.0.0.1:5173"]
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if not settings.is_production else ["https://yourdomain.com"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { login, getMe } from '../api/endpoints'
+import { login } from '../api/endpoints'
 import { useAuth } from '../context/AuthContext'
 import styles from './Auth.module.css'
 
@@ -16,9 +16,9 @@ export default function Login() {
     setError('')
     setLoading(true)
     try {
-      const { access_token } = await login(form.email, form.password)
-      const user = await getMe()
-      signIn(access_token, user)
+      // login() returns the user object; the server sets the httpOnly cookie
+      const user = await login(form.email, form.password)
+      signIn(user)
       navigate('/dashboard')
     } catch (err) {
       setError(err.response?.data?.detail || 'Login failed')
