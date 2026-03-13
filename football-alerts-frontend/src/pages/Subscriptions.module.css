@@ -67,14 +67,14 @@
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.15em;
-  color: var(--text-3);
+  color: var(--text-3);   /* brighter */
   border-right: 1px solid var(--border);
   transition: all 0.15s;
 }
 
 .tab:last-child { border-right: none; }
-.tab:hover:not(:disabled) { color: var(--text); background: var(--bg-3); }
-.tab:disabled { opacity: 0.3; cursor: not-allowed; }
+.tab:hover:not(:disabled) { color: var(--text-2); background: var(--bg-3); }
+.tab:disabled { opacity: 0.35; cursor: not-allowed; }
 
 .tabActive {
   color: var(--accent);
@@ -118,7 +118,7 @@
 
 .itemMeta {
   font-size: 0.75rem;
-  color: var(--text-3);
+  color: var(--text-3);   /* brighter than before */
   margin-top: 0.15rem;
 }
 
@@ -130,13 +130,13 @@
 
 .browseBtn {
   background: transparent;
-  color: var(--text-3);
+  color: var(--text-2);   /* brighter */
   font-family: var(--font-display);
   font-size: 0.65rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   padding: 0.3rem 0.6rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-2);  /* brighter */
   transition: all 0.15s;
 }
 
@@ -189,7 +189,7 @@
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.2em;
-  color: var(--text-3);
+  color: var(--text-2);   /* brighter */
   padding: 0.75rem 1.25rem;
   border-bottom: 1px solid var(--border);
   background: var(--bg-2);
@@ -241,7 +241,7 @@
   font-size: 0.65rem;
   font-weight: 700;
   padding: 0.25rem 0.5rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-2);  /* brighter */
   transition: all 0.15s;
   flex-shrink: 0;
 }
@@ -258,4 +258,56 @@
   .active {
     position: static;
   }
+}
+
+.activeBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: #000;
+  font-size: 0.6rem;
+  font-weight: 800;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}
+
+/* Teams sub-view header */
+.teamsHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-2);
+}
+
+.backBtn {
+  background: transparent;
+  color: var(--text-3);
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--border-2);
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.backBtn:hover {
+  color: var(--text);
+  border-color: var(--text-3);
+}
+
+.teamsLeagueName {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--text-2);
 }

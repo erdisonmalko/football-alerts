@@ -67,11 +67,15 @@ async def get_upcoming_matches_for_browse(
     db: AsyncSession,
     days_ahead: int = 14,
     league_code: Optional[str] = None,
-) -> list[Match]:
+    page: int = 1,
+    page_size: int = 20,
+) -> tuple[list[Match], int]:
     """
-    Returns upcoming scheduled matches for the browse UI.
-    Optionally filtered by league.
+    Returns a page of upcoming scheduled matches for the browse UI.
+    Returns (matches, total_count).
     """
+    from sqlalchemy import func as sqlfunc
+
     now = datetime.now(timezone.utc)
     window_end = now + timedelta(days=days_ahead)
 
@@ -83,12 +87,21 @@ async def get_upcoming_matches_for_browse(
     if league_code:
         filters.append(Match.league_code == league_code.upper())
 
+    # Total count
+    count_result = await db.execute(
+        select(sqlfunc.count()).select_from(Match).where(*filters)
+    )
+    total = count_result.scalar_one()
+
+    # Paginated results
+    offset = (page - 1) * page_size
     result = await db.execute(
         select(Match).where(*filters).order_by(Match.kickoff_utc)
+        .offset(offset).limit(page_size)
     )
     matches = list(result.scalars().all())
-    logger.debug(f"Browse: found {len(matches)} upcoming matches (league={league_code})")
-    return matches
+    logger.debug(f"Browse: page {page}/{-(-total // page_size)}, {len(matches)} matches (league={league_code})")
+    return matches, total
 
 
 async def get_user_match_subscriptions(

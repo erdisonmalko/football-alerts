@@ -3,14 +3,15 @@
 :root {
   --bg:         #0a0a0a;
   --bg-2:       #111111;
-  --bg-3:       #1a1a1a;
-  --border:     #2a2a2a;
-  --border-2:   #333333;
+  --bg-3:       #1c1c1c;
+  --border:     #2e2e2e;
+  --border-2:   #3a3a3a;
   --text:       #f0f0f0;
-  --text-2:     #888888;
-  --text-3:     #555555;
+  --text-2:     #b0b0b0;  /* was #888 — brighter */
+  --text-3:     #777777;  /* was #555 — brighter */
+  --text-4:     #505050;  /* new dim level for truly secondary content */
   --accent:     #00e676;
-  --accent-dim: #00e67620;
+  --accent-dim: #00e67618;
   --accent-2:   #ff3d3d;
   --danger:     #ff3d3d;
   --font-display: 'Barlow Condensed', sans-serif;
