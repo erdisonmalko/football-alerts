@@ -1,8 +1,53 @@
-.venv
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Env / secrets — NEVER commit these
 .env
-celerybeat-schedule
-/home/soni/work/football-alerts/celerybeat-schedule
-/celerybeat-schedule
-./celerybeat-schedule
-__pycache__
-*.pyc
+.env.local
+.env.*.local
+
+# Virtualenv
+venv/
+.venv/
+env/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# Alembic
+alembic/versions/__pycache__/
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Node (frontend)
+node_modules/
+football-alerts-frontend/node_modules/
+football-alerts-frontend/dist/
+football-alerts-frontend/.env
+football-alerts-frontend/.env.local
+
+# Docker
+*.pid

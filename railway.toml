@@ -1,0 +1,54 @@
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+# ── API ──────────────────────────────────────────────────────────────────────
+[[services]]
+name = "api"
+
+[services.deploy]
+startCommand = "/entrypoint.sh"
+
+[[services.variables]]
+name = "SERVICE_TYPE"
+value = "api"
+
+[[services.variables]]
+name = "APP_ENV"
+value = "production"
+
+[services.healthcheck]
+path = "/health"
+interval = 30
+timeout = 10
+retries = 3
+
+# ── CELERY WORKER ─────────────────────────────────────────────────────────────
+[[services]]
+name = "worker"
+
+[services.deploy]
+startCommand = "/entrypoint.sh"
+
+[[services.variables]]
+name = "SERVICE_TYPE"
+value = "worker"
+
+[[services.variables]]
+name = "APP_ENV"
+value = "production"
+
+# ── CELERY BEAT ───────────────────────────────────────────────────────────────
+[[services]]
+name = "beat"
+
+[services.deploy]
+startCommand = "/entrypoint.sh"
+
+[[services.variables]]
+name = "SERVICE_TYPE"
+value = "beat"
+
+[[services.variables]]
+name = "APP_ENV"
+value = "production"
