@@ -16,6 +16,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 logger = get_logger(__name__)
 
+
 @router.get("/me", response_model=UserOut)
 async def get_me(current_user: User = Depends(get_current_user)):
     return current_user
@@ -28,7 +29,9 @@ async def update_me(
     db: AsyncSession = Depends(get_db),
 ):
     if data.full_name is not None:
-        logger.info(f"Updating full name for user {current_user.id} to '{data.full_name}'")
+        logger.info(
+            f"Updating full name for user {current_user.id} to '{data.full_name}'"
+        )
         current_user.full_name = data.full_name
     await db.commit()
     await db.refresh(current_user)
@@ -48,6 +51,7 @@ async def delete_me(
 
 
 # ── Subscriptions ──────────────────────────────────────────────────────────────
+
 
 @router.get("/me/subscriptions", response_model=list[SubscriptionOut])
 async def list_subscriptions(
@@ -73,7 +77,9 @@ async def add_subscription(
     return sub
 
 
-@router.delete("/me/subscriptions/{subscription_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/me/subscriptions/{subscription_id}", status_code=status.HTTP_204_NO_CONTENT
+)
 async def remove_subscription(
     subscription_id: int,
     current_user: User = Depends(get_current_user),
@@ -81,4 +87,6 @@ async def remove_subscription(
 ):
     deleted = await delete_subscription(db, current_user.id, subscription_id)
     if not deleted:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+        )

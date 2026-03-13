@@ -54,7 +54,9 @@ async def login(
             detail="Incorrect email or password",
         )
     if not user.is_active:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is disabled")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Account is disabled"
+        )
 
     token = create_access_token(subject=str(user.id))
 
@@ -62,9 +64,9 @@ async def login(
         key=COOKIE_NAME,
         value=token,
         max_age=COOKIE_MAX_AGE,
-        httponly=True,                          # JS cannot read this
-        secure=settings.is_production,          # HTTPS only in production
-        samesite="lax",                         # CSRF protection
+        httponly=True,  # JS cannot read this
+        secure=settings.is_production,  # HTTPS only in production
+        samesite="lax",  # CSRF protection
     )
     logger.info(f"[login] User logged in successfully: {user.email}")
     return user

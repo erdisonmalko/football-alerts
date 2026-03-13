@@ -8,8 +8,10 @@ from app.models.models import Subscription, User
 from app.schemas.schemas import SubscriptionCreate, UserRegister
 
 from app.core.logger import get_logger
+
 logger = get_logger(__name__)
 # ── Users ─────────────────────────────────────────────────────────────────────
+
 
 async def get_user_by_email(db: AsyncSession, email: str) -> Optional[User]:
     logger.debug(f"Fetching user by email: {email}")
@@ -38,6 +40,7 @@ async def create_user(db: AsyncSession, data: UserRegister) -> User:
 
 # ── Subscriptions ─────────────────────────────────────────────────────────────
 
+
 async def get_user_subscriptions(db: AsyncSession, user_id: int) -> list[Subscription]:
     result = await db.execute(
         select(Subscription)
@@ -61,7 +64,9 @@ async def create_subscription(
     )
     sub = existing.scalar_one_or_none()
     if sub:
-        logger.debug(f"Subscription already exists for user ID: {user_id}, type: {data.subscription_type}.")
+        logger.debug(
+            f"Subscription already exists for user ID: {user_id}, type: {data.subscription_type}."
+        )
         return sub
 
     sub = Subscription(
@@ -72,7 +77,9 @@ async def create_subscription(
     )
     db.add(sub)
     await db.flush()
-    logger.info(f"Created subscription ID: {sub.id} for user ID: {user_id}, type: {data.subscription_type}")
+    logger.info(
+        f"Created subscription ID: {sub.id} for user ID: {user_id}, type: {data.subscription_type}"
+    )
     return sub
 
 
@@ -87,7 +94,9 @@ async def delete_subscription(
     )
     sub = result.scalar_one_or_none()
     if not sub:
-        logger.warning(f"Subscription ID: {subscription_id} not found for user ID: {user_id}")
+        logger.warning(
+            f"Subscription ID: {subscription_id} not found for user ID: {user_id}"
+        )
         return False
     await db.delete(sub)
     logger.info(f"Deleted subscription ID: {subscription_id} for user ID: {user_id}")

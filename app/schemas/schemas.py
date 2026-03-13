@@ -8,6 +8,7 @@ from app.models.models import AlertType, SubscriptionType
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
 
+
 class UserRegister(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=72)
@@ -37,6 +38,7 @@ class TokenData(BaseModel):
 
 # ── User ──────────────────────────────────────────────────────────────────────
 
+
 class UserOut(BaseModel):
     id: int
     email: EmailStr
@@ -52,6 +54,7 @@ class UserUpdate(BaseModel):
 
 
 # ── Subscription ──────────────────────────────────────────────────────────────
+
 
 class SubscriptionCreate(BaseModel):
     subscription_type: SubscriptionType
@@ -71,6 +74,7 @@ class SubscriptionOut(BaseModel):
 
 # ── Match ─────────────────────────────────────────────────────────────────────
 
+
 class MatchOut(BaseModel):
     id: int
     external_id: int
@@ -87,6 +91,7 @@ class MatchOut(BaseModel):
 
 class MatchOutWithSubscribed(MatchOut):
     """MatchOut extended with a flag showing if the current user is subscribed."""
+
     is_subscribed: bool = False
 
 
@@ -99,6 +104,7 @@ class PaginatedMatches(BaseModel):
 
 
 # ── Leagues & Teams (from football-data.org) ──────────────────────────────────
+
 
 class LeagueOut(BaseModel):
     code: str
@@ -115,6 +121,7 @@ class TeamOut(BaseModel):
 
 
 # ── Alert Log ─────────────────────────────────────────────────────────────────
+
 
 class AlertLogOut(BaseModel):
     id: int
