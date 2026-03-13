@@ -62,7 +62,7 @@ async def create_subscription(
     )
     sub = existing.scalar_one_or_none()
     if sub:
-        logger.debug(f"Subscription already exists for user ID: {user_id}, type: {data.subscription_type}, external ID: {data.external_id}")
+        logger.debug(f"Subscription already exists for user ID: {user_id}, type: {data.subscription_type}.")
         return sub
 
     sub = Subscription(
@@ -73,7 +73,7 @@ async def create_subscription(
     )
     db.add(sub)
     await db.flush()
-    logger.info(f"Created subscription ID: {sub.id} for user ID: {user_id}, type: {data.subscription_type}, external ID: {data.external_id}")
+    logger.info(f"Created subscription ID: {sub.id} for user ID: {user_id}, type: {data.subscription_type}")
     return sub
 
 

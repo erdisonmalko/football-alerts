@@ -7,8 +7,8 @@ export default function Nav() {
   const location = useLocation()
   const navigate = useNavigate()
 
-  const handleSignOut = () => {
-    signOut()
+  const handleSignOut = async () => {
+    await signOut()
     navigate('/login')
   }
 
