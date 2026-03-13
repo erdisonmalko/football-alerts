@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import get_current_user
+from app.core.security import COOKIE_NAME, get_current_user
 from app.db.session import get_db
+from app.core.logger import get_logger
 from app.models.models import User
 from app.schemas.schemas import SubscriptionCreate, SubscriptionOut, UserOut, UserUpdate
 from app.services.user_service import (
@@ -13,12 +14,10 @@ from app.services.user_service import (
 
 router = APIRouter(prefix="/users", tags=["users"])
 
-from app.core.logger import get_logger
 logger = get_logger(__name__)
 
 @router.get("/me", response_model=UserOut)
 async def get_me(current_user: User = Depends(get_current_user)):
-    logger.info(f"Fetching user info for: {current_user.email}")
     return current_user
 
 
@@ -29,11 +28,23 @@ async def update_me(
     db: AsyncSession = Depends(get_db),
 ):
     if data.full_name is not None:
+        logger.info(f"Updating full name for user {current_user.id} to '{data.full_name}'")
         current_user.full_name = data.full_name
     await db.commit()
     await db.refresh(current_user)
-    logger.info(f"Updated user info for: {current_user.email}(ID: {current_user.id})")
     return current_user
+
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_me(
+    response: Response,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Permanently deletes the account and clears the auth cookie."""
+    await db.delete(current_user)
+    await db.commit()
+    response.delete_cookie(key=COOKIE_NAME, samesite="lax")
 
 
 # ── Subscriptions ──────────────────────────────────────────────────────────────
@@ -42,18 +53,20 @@ async def update_me(
 async def list_subscriptions(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-):  
-    logger.info(f"Fetching subscriptions for user: {current_user.email}(ID: {current_user.id})")
+):
     return await get_user_subscriptions(db, current_user.id)
 
 
-@router.post("/me/subscriptions",response_model=SubscriptionOut,status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/me/subscriptions",
+    response_model=SubscriptionOut,
+    status_code=status.HTTP_201_CREATED,
+)
 async def add_subscription(
     data: SubscriptionCreate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    logger.info(f"Adding subscription for user: {current_user.email}(ID: {current_user.id})")
     sub = await create_subscription(db, current_user.id, data)
     await db.commit()
     await db.refresh(sub)
@@ -65,10 +78,7 @@ async def remove_subscription(
     subscription_id: int,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-):  
-    logger.info(f"""
-    Removing subscription ID: {subscription_id} for user: {current_user.email}(ID: {current_user.id})
-    """)
+):
     deleted = await delete_subscription(db, current_user.id, subscription_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")

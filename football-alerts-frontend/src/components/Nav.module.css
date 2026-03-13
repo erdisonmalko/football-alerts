@@ -37,7 +37,7 @@
   font-size: 0.65rem;
   font-weight: 700;
   letter-spacing: 0.1em;
-  color: var(--text-2);  /* brighter than before */
+  color: var(--text-2);
   line-height: 1.3;
 }
 
@@ -52,46 +52,219 @@
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.15em;
-  color: var(--text-3);  /* brighter than before */
+  color: var(--text-3);
   padding: 0.4rem 0.75rem;
   transition: color 0.15s;
 }
 
 .link:hover { color: var(--text); }
+.active { color: var(--accent); }
 
-.active {
-  color: var(--accent);
-}
-
-.user {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
+/* Profile dropdown trigger */
+.profileWrap {
+  position: relative;
   flex-shrink: 0;
 }
 
-.email {
-  font-size: 0.8rem;
-  color: var(--text-3);
-  max-width: 160px;
+.profileBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: transparent;
+  border: 1px solid var(--border-2);
+  padding: 0.3rem 0.6rem 0.3rem 0.4rem;
+  transition: all 0.15s;
+  cursor: pointer;
+}
+
+.profileBtn:hover,
+.profileBtnOpen {
+  border-color: var(--text-3);
+}
+
+.profileInitial {
+  width: 22px;
+  height: 22px;
+  background: var(--accent);
+  color: #000;
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.profileName {
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-2);
+  max-width: 140px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.signOut {
+.profileCaret {
+  font-size: 0.45rem;
+  color: var(--text-4);
+  margin-left: 0.1rem;
+}
+
+/* Dropdown panel */
+.dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 260px;
+  background: var(--bg-2);
+  border: 1px solid var(--border-2);
+  z-index: 200;
+}
+
+.dropHeader {
+  padding: 1rem 1.25rem 0.875rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.dropEmail {
+  font-size: 0.825rem;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 0.2rem;
+  word-break: break-all;
+}
+
+.dropJoined {
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--text-4);
+}
+
+.dropSection {
+  padding: 0.5rem 0;
+}
+
+.dropDivider {
+  height: 1px;
+  background: var(--border);
+  margin: 0.25rem 0;
+}
+
+.dropAction {
+  display: block;
+  width: 100%;
+  text-align: left;
   background: transparent;
-  color: var(--text-2);  /* brighter */
+  color: var(--text-2);
   font-family: var(--font-display);
   font-size: 0.7rem;
   font-weight: 700;
-  letter-spacing: 0.15em;
-  padding: 0.3rem 0.6rem;
-  border: 1px solid var(--border-2);  /* brighter border */
+  letter-spacing: 0.12em;
+  padding: 0.6rem 1.25rem;
+  transition: all 0.15s;
+  border: none;
+}
+
+.dropAction:hover {
+  color: var(--text);
+  background: var(--bg-3);
+}
+
+.dropDanger {
+  color: var(--text-3);
+}
+
+.dropDanger:hover {
+  color: var(--danger);
+  background: #ff3d3d08;
+}
+
+/* Edit name inline */
+.editRow {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  padding: 0.5rem 1.25rem;
+}
+
+.nameInput {
+  flex: 1;
+  background: var(--bg-3);
+  border: 1px solid var(--border-2);
+  color: var(--text);
+  font-size: 0.8rem;
+  padding: 0.3rem 0.5rem;
+  min-width: 0;
+}
+
+.nameInput::placeholder { color: var(--text-4); }
+.nameInput:focus { border-color: var(--accent); outline: none; }
+
+.saveBtn {
+  background: var(--accent);
+  color: #000;
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  padding: 0.3rem 0.5rem;
+  border: none;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+
+.saveBtn:hover:not(:disabled) { opacity: 0.85; }
+.saveBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.cancelBtn {
+  background: transparent;
+  color: var(--text-3);
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 0.3rem 0.4rem;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
   transition: all 0.15s;
 }
 
-.signOut:hover {
-  border-color: var(--danger);
-  color: var(--danger);
+.cancelBtn:hover { color: var(--text); border-color: var(--border-2); }
+
+/* Delete confirm */
+.deleteConfirm {
+  padding: 0.875rem 1.25rem;
 }
+
+.deleteWarning {
+  font-size: 0.775rem;
+  color: var(--text-3);
+  line-height: 1.5;
+  margin-bottom: 0.875rem;
+}
+
+.deleteActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.deleteConfirmBtn {
+  background: var(--danger);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  padding: 0.4rem 0.75rem;
+  border: none;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+
+.deleteConfirmBtn:hover:not(:disabled) { opacity: 0.85; }
+.deleteConfirmBtn:disabled { opacity: 0.5; cursor: not-allowed; }

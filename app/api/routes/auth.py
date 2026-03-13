@@ -46,7 +46,7 @@ async def login(
     Authenticates the user and sets an httpOnly cookie with the JWT.
     Returns the user object so the frontend can populate its auth state.
     """
-    logger.info(f"Login attempt for email: {form_data.username}")
+    logger.info(f"[login] Login attempt for email: {form_data.username}")
     user = await get_user_by_email(db, form_data.username)
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
@@ -66,7 +66,7 @@ async def login(
         secure=settings.is_production,          # HTTPS only in production
         samesite="lax",                         # CSRF protection
     )
-    logger.info(f"User logged in successfully: {user.email}")
+    logger.info(f"[login] User logged in successfully: {user.email}")
     return user
 
 
