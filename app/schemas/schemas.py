@@ -90,6 +90,14 @@ class MatchOutWithSubscribed(MatchOut):
     is_subscribed: bool = False
 
 
+class PaginatedMatches(BaseModel):
+    items: list[MatchOutWithSubscribed]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
 # ── Leagues & Teams (from football-data.org) ──────────────────────────────────
 
 class LeagueOut(BaseModel):
