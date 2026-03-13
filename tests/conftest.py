@@ -7,7 +7,6 @@ from app.db.session import get_db
 from app.models.models import Base
 from app.core.config import settings
 
-# Disable SSL for local/CI connections (asyncpg tries SSL by default)
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=False,
@@ -26,7 +25,7 @@ app.dependency_overrides[get_db] = override_get_db
 
 @pytest_asyncio.fixture(scope="session")
 async def setup_db():
-    """Create all tables before integration tests, drop after."""
+    """Create all tables once per test session, drop after."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
@@ -35,31 +34,30 @@ async def setup_db():
 
 
 @pytest_asyncio.fixture
-async def db(setup_db) -> AsyncSession:
-    async with TestSessionLocal() as session:
-        yield session
-        await session.rollback()
-
-
-@pytest_asyncio.fixture
 async def client(setup_db) -> AsyncClient:
+    """Fresh HTTP client per test — cookies do not persist between tests."""
     async with AsyncClient(
         transport=ASGITransport(app=app),
-        base_url="http://test"
+        base_url="http://test",
     ) as ac:
         yield ac
 
 
 @pytest_asyncio.fixture
-async def auth_client(client: AsyncClient) -> AsyncClient:
-    """Client pre-authenticated with a test user."""
-    await client.post("/api/v1/auth/register", json={
-        "email": "testuser@example.com",
-        "password": "TestPass123!",
-        "full_name": "Test User",
-    })
-    await client.post("/api/v1/auth/login", json={
-        "email": "testuser@example.com",
-        "password": "TestPass123!",
-    })
-    return client
+async def auth_client(setup_db) -> AsyncClient:
+    """Separate client that is pre-authenticated as a unique test user."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as ac:
+        await ac.post("/api/v1/auth/register", json={
+            "email": "testuser@example.com",
+            "password": "TestPass123",
+            "full_name": "Test User",
+        })
+        # Login uses form data (OAuth2PasswordRequestForm)
+        await ac.post("/api/v1/auth/login", data={
+            "username": "testuser@example.com",
+            "password": "TestPass123",
+        })
+        yield ac
