@@ -2,10 +2,10 @@ from datetime import datetime
 import resend
 from app.core.config import settings
 from app.models.models import AlertType, Match, User
+from app.core.logger import get_logger
 
 resend.api_key = settings.RESEND_API_KEY
 
-from app.core.logger import get_logger
 logger = get_logger(__name__)
 
 
