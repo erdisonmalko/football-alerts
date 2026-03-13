@@ -103,12 +103,19 @@ jobs:
       - name: Run Alembic migrations on test DB
         env:
           PYTHONPATH: ${{ github.workspace }}
+          SECRET_KEY: ci-test-secret-key
+          ADMIN_KEY: ci-test-admin-key
+          DATABASE_URL: postgresql+asyncpg://postgres:password@localhost:5432/football_alerts_test
           DATABASE_URL_SYNC: postgresql://postgres:password@localhost:5432/football_alerts_test
         run: alembic upgrade head
 
       - name: Run integration tests
         env:
           PYTHONPATH: ${{ github.workspace }}
+          SECRET_KEY: ci-test-secret-key
+          ADMIN_KEY: ci-test-admin-key
+          DATABASE_URL: postgresql+asyncpg://postgres:password@localhost:5432/football_alerts_test
+          DATABASE_URL_SYNC: postgresql://postgres:password@localhost:5432/football_alerts_test
         run: pytest tests/test_integration_auth.py tests/test_integration_users.py -v
 
   # ── DEPLOY ──────────────────────────────────────────────────────────────────
