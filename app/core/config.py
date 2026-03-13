@@ -6,14 +6,14 @@ class Settings(BaseSettings):
 
     # App
     APP_ENV: str = "development"
-    SECRET_KEY: str                        # required — no default
+    SECRET_KEY: str  # required — no default
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080
     ALGORITHM: str = "HS256"
-    ADMIN_KEY: str                         # required — no default
+    ADMIN_KEY: str  # required — no default
 
     # Database
-    DATABASE_URL: str                      # required — no default
-    DATABASE_URL_SYNC: str                 # required — no default
+    DATABASE_URL: str  # required — no default
+    DATABASE_URL_SYNC: str  # required — no default
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
