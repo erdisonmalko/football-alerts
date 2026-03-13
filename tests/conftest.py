@@ -7,8 +7,12 @@ from app.db.session import get_db
 from app.models.models import Base
 from app.core.config import settings
 
-# Use test DB (set via pytest env in pyproject.toml)
-engine = create_async_engine(settings.DATABASE_URL, echo=False)
+# Disable SSL for local/CI connections (asyncpg tries SSL by default)
+engine = create_async_engine(
+    settings.DATABASE_URL,
+    echo=False,
+    connect_args={"ssl": False},
+)
 TestSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
 
@@ -20,9 +24,9 @@ async def override_get_db():
 app.dependency_overrides[get_db] = override_get_db
 
 
-@pytest_asyncio.fixture(scope="session", autouse=True)
+@pytest_asyncio.fixture(scope="session")
 async def setup_db():
-    """Create all tables before tests, drop after."""
+    """Create all tables before integration tests, drop after."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
@@ -31,14 +35,14 @@ async def setup_db():
 
 
 @pytest_asyncio.fixture
-async def db() -> AsyncSession:
+async def db(setup_db) -> AsyncSession:
     async with TestSessionLocal() as session:
         yield session
         await session.rollback()
 
 
 @pytest_asyncio.fixture
-async def client() -> AsyncClient:
+async def client(setup_db) -> AsyncClient:
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test"
