@@ -20,6 +20,7 @@ logger = get_logger(__name__)
 
 load_dotenv()  # Load environment variables from .env file
 
+
 async def _wait_for_db(retries: int = 10, delay: float = 3.0) -> None:
     """
     Retry the DB connection until Postgres is actually ready.
