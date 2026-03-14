@@ -63,7 +63,7 @@ async def create_subscription(
         logger.debug(
             f"Subscription already exists for user {user_id}: {data.subscription_type.value}"
         )
-        return None # Caller will handle the conflict response
+        return None  # Caller will handle the conflict response
 
     sub = Subscription(
         user_id=user_id,
