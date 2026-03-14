@@ -7,7 +7,9 @@ RUN npm install
 
 COPY . .
 
-# Don't switch to node user — keep root for dev server
+RUN npm run build
+RUN npm install -g serve
+
 EXPOSE 5173
 
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+CMD ["sh", "-c", "serve -s dist -l $PORT"]

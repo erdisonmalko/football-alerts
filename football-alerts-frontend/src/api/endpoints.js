@@ -1,5 +1,8 @@
 import api from './client'
 
+//health
+export const checkHealth = () => api.get('/health').then(r => r.data)
+
 // Auth
 export const register = (email, password, fullName) =>
   api.post('/auth/register', { email, password, full_name: fullName })
