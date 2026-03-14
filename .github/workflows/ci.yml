@@ -125,6 +125,7 @@ jobs:
     name: Deploy to Railway
     runs-on: ubuntu-latest
     needs: integration-tests
+    environment: production
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
