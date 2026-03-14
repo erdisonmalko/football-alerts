@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+import bcrypt
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from fastapi import Cookie, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,17 +12,23 @@ from app.db.session import get_db
 
 logger = get_logger(__name__)
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 COOKIE_NAME = "access_token"
 
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
-
-
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    """Hash a password using bcrypt directly (no passlib)."""
+    return bcrypt.hashpw(
+        password.encode("utf-8")[:72],  # bcrypt hard limit is 72 bytes
+        bcrypt.gensalt(),
+    ).decode("utf-8")
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a password against its bcrypt hash."""
+    return bcrypt.checkpw(
+        plain_password.encode("utf-8")[:72],
+        hashed_password.encode("utf-8"),
+    )
 
 
 def create_access_token(subject: str, expires_delta: Optional[timedelta] = None) -> str:
@@ -48,10 +54,6 @@ async def get_current_user(
     db: AsyncSession = Depends(get_db),
     token: Optional[str] = Cookie(default=None, alias=COOKIE_NAME),
 ):
-    """
-    FastAPI dependency — reads the JWT from the httpOnly cookie,
-    returns the authenticated User or raises 401.
-    """
     from app.services.user_service import get_user_by_id  # avoid circular import
 
     credentials_exception = HTTPException(

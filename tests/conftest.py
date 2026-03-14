@@ -3,6 +3,7 @@ import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from sqlalchemy.pool import NullPool
 
 from app.main import app
 from app.db.session import get_db
@@ -10,10 +11,9 @@ from app.models.models import Base
 from app.core.config import settings
 
 
-# ── Create/drop tables synchronously — no async, no event loop conflicts ──────
+# ── Sync setup/teardown ───────────────────────────────────────────────────────
 @pytest.fixture(scope="session", autouse=True)
 def setup_db():
-    """Use the SYNC engine just for table setup/teardown. Simple and reliable."""
     sync_engine = create_engine(settings.DATABASE_URL_SYNC)
     Base.metadata.create_all(sync_engine)
     yield
@@ -21,11 +21,15 @@ def setup_db():
     sync_engine.dispose()
 
 
-# ── Async engine for the app to use during tests ──────────────────────────────
+# ── Async engine with NullPool ────────────────────────────────────────────────
+# NullPool means no connection reuse between tests — each request gets a fresh
+# connection. This prevents poisoned connections from one test bleeding into
+# the next when a transaction is left open by a failure.
 async_engine = create_async_engine(
     settings.DATABASE_URL,
     echo=False,
     connect_args={"ssl": False},
+    poolclass=NullPool,
 )
 TestSessionLocal = async_sessionmaker(async_engine, expire_on_commit=False)
 
@@ -38,7 +42,7 @@ async def override_get_db():
 app.dependency_overrides[get_db] = override_get_db
 
 
-# ── HTTP clients ──────────────────────────────────────────────────────────────
+# ── Clients ───────────────────────────────────────────────────────────────────
 @pytest_asyncio.fixture
 async def client() -> AsyncClient:
     async with AsyncClient(
