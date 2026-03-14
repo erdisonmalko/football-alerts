@@ -50,13 +50,29 @@ export default function Dashboard() {
 
   const fetchMatches = async (leagueCode, pageNum) => {
     setLoading(true)
+
     try {
       const params = new URLSearchParams({ page: pageNum, page_size: PAGE_SIZE })
-      if (leagueCode) params.set('league_code', leagueCode)
+      if (leagueCode) params.set("league_code", leagueCode)
+
       const data = await getUpcomingMatches(`?${params}`)
+
+      if (!data || !Array.isArray(data.items)) {
+        setMatches([])
+        setTotalPages(1)
+        setTotal(0)
+        return
+      }
+
       setMatches(data.items)
-      setTotalPages(data.total_pages)
-      setTotal(data.total)
+      setTotalPages(data.total_pages ?? 1)
+      setTotal(data.total ?? 0)
+
+    } catch (err) {
+      console.error("Failed to fetch matches:", err)
+      setMatches([])
+      setTotalPages(1)
+      setTotal(0)
     } finally {
       setLoading(false)
     }
