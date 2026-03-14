@@ -6,7 +6,7 @@ class Settings(BaseSettings):
 
     # App
     APP_ENV: str = "development"
-    SECRET_KEY: str  # required — no default
+    SECRET_KEY: str = "update-me-on-production"  # required — no default
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080
     ALGORITHM: str = "HS256"
     ADMIN_KEY: str = "update-me"  # required — no default
