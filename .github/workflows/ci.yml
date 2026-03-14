@@ -116,7 +116,7 @@ jobs:
           ADMIN_KEY: ci-test-admin-key
           DATABASE_URL: postgresql+asyncpg://postgres:password@localhost:5432/football_alerts_test
           DATABASE_URL_SYNC: postgresql://postgres:password@localhost:5432/football_alerts_test
-        run: pytest tests/test_integration_auth.py tests/test_integration_users.py -v
+        run: pytest tests/integration/ -v
 
   # ── DEPLOY ──────────────────────────────────────────────────────────────────
   deploy:

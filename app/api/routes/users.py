@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import COOKIE_NAME, get_current_user
-from app.db.session import get_db
 from app.core.logger import get_logger
+from app.db.session import get_db
 from app.models.models import User
 from app.schemas.schemas import SubscriptionCreate, SubscriptionOut, UserOut, UserUpdate
 from app.services.user_service import (
@@ -12,9 +12,8 @@ from app.services.user_service import (
     get_user_subscriptions,
 )
 
-router = APIRouter(prefix="/users", tags=["users"])
-
 logger = get_logger(__name__)
+router = APIRouter(prefix="/users", tags=["users"])
 
 
 @router.get("/me", response_model=UserOut)
@@ -29,12 +28,10 @@ async def update_me(
     db: AsyncSession = Depends(get_db),
 ):
     if data.full_name is not None:
-        logger.info(
-            f"Updating full name for user {current_user.id} to '{data.full_name}'"
-        )
         current_user.full_name = data.full_name
     await db.commit()
     await db.refresh(current_user)
+    logger.info(f"User updated: {current_user.email} (id={current_user.id})")
     return current_user
 
 
@@ -48,6 +45,7 @@ async def delete_me(
     await db.delete(current_user)
     await db.commit()
     response.delete_cookie(key=COOKIE_NAME, samesite="lax")
+    logger.warning(f"User deleted: {current_user.email} (id={current_user.id})")
 
 
 # ── Subscriptions ──────────────────────────────────────────────────────────────
@@ -72,6 +70,10 @@ async def add_subscription(
     db: AsyncSession = Depends(get_db),
 ):
     sub = await create_subscription(db, current_user.id, data)
+    if sub is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Subscription already exists"
+        )
     await db.commit()
     await db.refresh(sub)
     return sub
