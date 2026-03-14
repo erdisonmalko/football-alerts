@@ -63,7 +63,7 @@ services:
   frontend:
     build:
       context: ./football-alerts-frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.local
     ports:
       - "5173:5173"
     volumes:
