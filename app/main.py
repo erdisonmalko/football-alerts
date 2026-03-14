@@ -1,3 +1,6 @@
+import os
+from dotenv import load_dotenv
+
 import asyncio
 from contextlib import asynccontextmanager
 
@@ -15,6 +18,7 @@ from app.core.logger import get_logger
 
 logger = get_logger(__name__)
 
+load_dotenv()  # Load environment variables from .env file
 
 async def _wait_for_db(retries: int = 10, delay: float = 3.0) -> None:
     """
@@ -59,7 +63,7 @@ app = FastAPI(
 # CORS — allow_origins must be explicit (never "*") when allow_credentials=True,
 # otherwise the browser refuses to send cookies on cross-origin requests.
 ALLOWED_ORIGINS = (
-    ["https://yourdomain.com"]
+    [os.getenv("FRONTEND_URL")]
     if settings.is_production
     else ["http://localhost:5173", "http://127.0.0.1:5173"]
 )
