@@ -121,21 +121,21 @@ jobs:
 
   # ── DEPLOY ────────────────────────────────────────────────────────────────────
   # Only runs on direct push to main (i.e. after a PR is merged)
-  deploy:
-    name: Deploy to Railway
-    runs-on: ubuntu-latest
-    needs: integration-tests
-    environment: production
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  # deploy:
+  #   name: Deploy to Railway
+  #   runs-on: ubuntu-latest
+  #   needs: integration-tests
+  #   environment: production
+  #   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
-    steps:
-      - uses: actions/checkout@v4
+  #   steps:
+  #     - uses: actions/checkout@v4
 
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
+  #     - name: Install Railway CLI
+  #       run: npm install -g @railway/cli
 
-      - name: Deploy
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
-        run: railway up --detach --project $RAILWAY_PROJECT_ID --environment production
+  #     - name: Deploy
+  #       env:
+  #         RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+  #         RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+  #       run: railway up --detach --project $RAILWAY_PROJECT_ID --environment production
