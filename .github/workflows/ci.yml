@@ -7,13 +7,11 @@ on:
     branches: [main]
 
 jobs:
-  # ── LINT ────────────────────────────────────────────────────────────────────
+  # ── LINT ─────────────────────────────────────────────────────────────────────
+  # Runs on every push to every branch
   lint:
-    name: Lint & type check
+    name: Lint & format check
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: .
 
     steps:
       - uses: actions/checkout@v4
@@ -24,7 +22,7 @@ jobs:
           cache: pip
 
       - name: Install lint tools
-        run: pip install ruff mypy
+        run: pip install ruff
 
       - name: Ruff lint
         run: ruff check app/
@@ -32,7 +30,8 @@ jobs:
       - name: Ruff format check
         run: ruff format --check app/
 
-  # ── UNIT TESTS ──────────────────────────────────────────────────────────────
+  # ── UNIT TESTS ────────────────────────────────────────────────────────────────
+  # Runs on every push to every branch
   unit-tests:
     name: Unit tests
     runs-on: ubuntu-latest
@@ -56,11 +55,13 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
         run: pytest tests/test_unit_alerts.py -v
 
-  # ── INTEGRATION TESTS ───────────────────────────────────────────────────────
+  # ── INTEGRATION TESTS ─────────────────────────────────────────────────────────
+  # Only runs on PRs to main OR direct pushes to main
   integration-tests:
     name: Integration tests
     runs-on: ubuntu-latest
     needs: unit-tests
+    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
 
     services:
       postgres:
@@ -118,12 +119,12 @@ jobs:
           DATABASE_URL_SYNC: postgresql://postgres:password@localhost:5432/football_alerts_test
         run: pytest tests/integration/ -v
 
-  # ── DEPLOY ──────────────────────────────────────────────────────────────────
+  # ── DEPLOY ────────────────────────────────────────────────────────────────────
+  # Only runs on direct push to main (i.e. after a PR is merged)
   deploy:
     name: Deploy to Railway
     runs-on: ubuntu-latest
     needs: integration-tests
-    # Only deploy when merging/pushing to main
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
@@ -135,4 +136,5 @@ jobs:
       - name: Deploy
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: railway up --detach
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+        run: railway up --detach --project $RAILWAY_PROJECT_ID
