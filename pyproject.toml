@@ -1,7 +1,6 @@
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
-asyncio_default_fixture_loop_scope = "session"
 env = [
     "APP_ENV=test",
     "DATABASE_URL=postgresql+asyncpg://postgres:password@localhost:5432/football_alerts_test",

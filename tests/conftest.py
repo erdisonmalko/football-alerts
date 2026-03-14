@@ -1,5 +1,7 @@
+import pytest
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
+from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
 from app.main import app
@@ -7,15 +9,25 @@ from app.db.session import get_db
 from app.models.models import Base
 from app.core.config import settings
 
-# ── Engine ────────────────────────────────────────────────────────────────────
-engine = create_async_engine(
+
+# ── Create/drop tables synchronously — no async, no event loop conflicts ──────
+@pytest.fixture(scope="session", autouse=True)
+def setup_db():
+    """Use the SYNC engine just for table setup/teardown. Simple and reliable."""
+    sync_engine = create_engine(settings.DATABASE_URL_SYNC)
+    Base.metadata.create_all(sync_engine)
+    yield
+    Base.metadata.drop_all(sync_engine)
+    sync_engine.dispose()
+
+
+# ── Async engine for the app to use during tests ──────────────────────────────
+async_engine = create_async_engine(
     settings.DATABASE_URL,
     echo=False,
     connect_args={"ssl": False},
-    pool_size=5,
-    max_overflow=10,
 )
-TestSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
+TestSessionLocal = async_sessionmaker(async_engine, expire_on_commit=False)
 
 
 async def override_get_db():
@@ -26,19 +38,9 @@ async def override_get_db():
 app.dependency_overrides[get_db] = override_get_db
 
 
-# ── DB: create once, drop after session ───────────────────────────────────────
-@pytest_asyncio.fixture(loop_scope="session", scope="session")
-async def setup_db():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    yield
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-
-
-# ── Unauthenticated client ────────────────────────────────────────────────────
-@pytest_asyncio.fixture(loop_scope="session", scope="session")
-async def client(setup_db) -> AsyncClient:
+# ── HTTP clients ──────────────────────────────────────────────────────────────
+@pytest_asyncio.fixture
+async def client() -> AsyncClient:
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
@@ -46,9 +48,8 @@ async def client(setup_db) -> AsyncClient:
         yield ac
 
 
-# ── Authenticated client ──────────────────────────────────────────────────────
-@pytest_asyncio.fixture(loop_scope="session", scope="session")
-async def auth_client(setup_db) -> AsyncClient:
+@pytest_asyncio.fixture
+async def auth_client() -> AsyncClient:
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
