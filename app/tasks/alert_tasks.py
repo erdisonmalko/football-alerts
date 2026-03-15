@@ -33,10 +33,15 @@ def sync_matches_task(self):
 )
 def dispatch_alerts_task(self):
     """Checks all alert windows and dispatches emails to subscribed users."""
+    print(f"[dispatch_alerts_task] STARTING - attempt {self.request.retries}")
     try:
         run_async(_dispatch_alerts())
+        print("[dispatch_alerts_task] COMPLETED")
     except Exception as exc:
+        import traceback
+
         print(f"[dispatch_alerts_task] FAILED: {type(exc).__name__}: {exc}")
+        print(traceback.format_exc())
         raise self.retry(exc=exc, countdown=60 * 2)
 
 
