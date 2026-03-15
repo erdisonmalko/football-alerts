@@ -89,7 +89,6 @@ async def _dispatch_alerts():
     )
     from app.services.user_service import get_user_by_id
     from app.services.email_service import send_match_alert
-    from sqlalchemy import text
 
     logger.info("[_dispatch_alerts] opening DB session")
 
