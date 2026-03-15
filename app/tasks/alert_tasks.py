@@ -91,21 +91,21 @@ async def _dispatch_alerts():
     from app.services.email_service import send_match_alert
     from sqlalchemy import text
 
-    logger.info("[alerts] opening DB session")
+    logger.info("[_dispatch_alerts] opening DB session")
 
     async with CelerySessionLocal() as db:
-        logger.info("[alerts] DB session acquired")
+        logger.info("[_dispatch_alerts] DB session acquired")
 
         await db.execute(text("SELECT 1"))
 
-        logger.info("[alerts] DB connection verified")
+        logger.info("[_dispatch_alerts] DB connection verified")
 
         for alert_type in AlertType:
-            logger.info("[alerts] checking alert type %s", alert_type)
+            logger.info("[_dispatch_alerts] checking alert type %s", alert_type)
 
             matches = await get_matches_due_for_alerts(db, alert_type)
 
-            logger.info("[alerts] %s matches found", len(matches))
+            logger.info("[_dispatch_alerts] %s matches found", len(matches))
 
             for match in matches:
                 user_ids = await get_subscribed_user_ids_for_match(db, match)
@@ -129,11 +129,11 @@ async def _dispatch_alerts():
                         await record_alert_sent(db, user_id, match.id, alert_type)
 
                         logger.info(
-                            "[alerts] sent %s alert → %s",
+                            "[_dispatch_alerts] sent %s alert → %s",
                             alert_type,
                             user.email,
                         )
 
         await db.commit()
 
-    logger.info("[alerts] dispatch complete")
+    logger.info("[_dispatch_alerts] dispatch complete")
