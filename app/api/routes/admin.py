@@ -19,9 +19,7 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 
 def verify_admin_key(x_admin_key: str = Header(...)):
     if x_admin_key != settings.ADMIN_KEY:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Invalid admin key"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid admin key")
     logger.info("Admin key verified.")
 
 
@@ -33,6 +31,14 @@ async def trigger_sync(db: AsyncSession = Depends(get_db)):
     await db.commit()
     logger.info(f"Match sync completed. {len(results)} leagues synced.")
     return {"status": "ok", "synced": results}
+
+
+@router.post("/dispatch-alerts", dependencies=[Depends(verify_admin_key)])
+async def trigger_dispatch():
+    """Manually trigger alert dispatch for all windows."""
+    from app.tasks.alert_tasks import dispatch_alerts_task
+    dispatch_alerts_task.delay()
+    return {"status": "ok", "message": "Alert dispatch queued"}
 
 
 @router.get("/upcoming-alerts", dependencies=[Depends(verify_admin_key)])
