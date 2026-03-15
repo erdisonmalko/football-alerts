@@ -4,6 +4,8 @@ Celery tasks for match syncing and alert dispatch.
 
 import logging
 
+from sqlalchemy import text
+
 from app.tasks.celery_app import celery_app
 from app.tasks.async_task import AsyncTask
 
@@ -46,13 +48,13 @@ def dispatch_alerts_task(self):
 async def _sync_matches():
     logger.debug("[_sync_matches] Opening DB session")
 
-    from app.db.session import AsyncSessionLocal
+    from app.db.celery_session import CelerySessionLocal
     from app.services.match_service import (
         sync_all_leagues,
         cleanup_past_match_subscriptions,
     )
 
-    async with AsyncSessionLocal() as db:
+    async with CelerySessionLocal() as db:
         logger.debug("[_sync_matches] DB session opened")
 
         logger.debug("[_sync_matches] Starting sync_all_leagues()")
@@ -77,7 +79,7 @@ async def _sync_matches():
 
 
 async def _dispatch_alerts():
-    from app.db.session import AsyncSessionLocal
+    from app.db.celery_session import CelerySessionLocal
     from app.models.models import AlertType
     from app.services.match_service import (
         get_matches_due_for_alerts,
@@ -87,11 +89,16 @@ async def _dispatch_alerts():
     )
     from app.services.user_service import get_user_by_id
     from app.services.email_service import send_match_alert
+    from sqlalchemy import text
 
     logger.info("[alerts] opening DB session")
 
-    async with AsyncSessionLocal() as db:
+    async with CelerySessionLocal() as db:
         logger.info("[alerts] DB session acquired")
+
+        await db.execute(text("SELECT 1"))
+
+        logger.info("[alerts] DB connection verified")
 
         for alert_type in AlertType:
             logger.info("[alerts] checking alert type %s", alert_type)
@@ -101,11 +108,7 @@ async def _dispatch_alerts():
             logger.info("[alerts] %s matches found", len(matches))
 
             for match in matches:
-                logger.debug("[alerts] processing match %s", match.id)
-
                 user_ids = await get_subscribed_user_ids_for_match(db, match)
-
-                logger.debug("[alerts] %s subscribers", len(user_ids))
 
                 for user_id in user_ids:
                     already_sent = await has_alert_been_sent(
@@ -126,10 +129,9 @@ async def _dispatch_alerts():
                         await record_alert_sent(db, user_id, match.id, alert_type)
 
                         logger.info(
-                            "[alerts] sent %s alert → %s for match %s",
+                            "[alerts] sent %s alert → %s",
                             alert_type,
                             user.email,
-                            match.id,
                         )
 
         await db.commit()
