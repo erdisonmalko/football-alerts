@@ -1,7 +1,4 @@
-import asyncio
-
 from celery import Celery
-from celery.signals import worker_process_init
 from celery.schedules import crontab
 
 from app.core.config import settings
@@ -12,22 +9,6 @@ celery_app = Celery(
     backend=settings.REDIS_URL,
     include=["app.tasks.alert_tasks"],
 )
-
-
-@worker_process_init.connect
-def init_worker(**kwargs):
-    """
-    Ensures each Celery worker process creates its own
-    SQLAlchemy connection pool instead of inheriting
-    the parent process pool.
-    """
-    from app.db.session import engine
-
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-
-    loop.run_until_complete(engine.dispose())
-    loop.close()
 
 
 celery_app.conf.update(
