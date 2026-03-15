@@ -13,7 +13,7 @@ from app.tasks.celery_app import celery_app
 
 def run_async(coro):
     """Run an async coroutine from a sync Celery task."""
-    return asyncio.get_event_loop().run_until_complete(coro)
+    return asyncio.run(coro)
 
 
 @celery_app.task(
