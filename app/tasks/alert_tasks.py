@@ -24,6 +24,7 @@ def sync_matches_task(self):
     try:
         run_async(_sync_matches())
     except Exception as exc:
+        print(f"[sync_matches_task] FAILED: {type(exc).__name__}: {exc}")
         raise self.retry(exc=exc, countdown=60 * 5)  # retry after 5 min
 
 
@@ -35,6 +36,7 @@ def dispatch_alerts_task(self):
     try:
         run_async(_dispatch_alerts())
     except Exception as exc:
+        print(f"[dispatch_alerts_task] FAILED: {type(exc).__name__}: {exc}")
         raise self.retry(exc=exc, countdown=60 * 2)
 
 
