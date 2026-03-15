@@ -1,18 +1,16 @@
 import asyncio
 from celery import Task
 
+from app.core.logger import get_logger
+
+logger = get_logger(__name__)
+
 
 class AsyncTask(Task):
     """
-    Base Celery task that allows running async code.
-    Each task execution gets its own event loop.
+    Celery Task base class that safely runs async functions.
     """
 
     def run_async(self, coro):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-        try:
-            return loop.run_until_complete(coro)
-        finally:
-            loop.close()
+        logger.debug("[AsyncTask] Running async task %s", self.name)
+        return asyncio.run(coro)

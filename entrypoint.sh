@@ -15,7 +15,10 @@ case "$SERVICE_TYPE" in
     ;;
   worker)
     echo "Starting Celery worker..."
-    exec celery -A app.tasks.celery_app worker --loglevel=info --concurrency=2
+    exec celery -A app.tasks.celery_app worker \
+      --loglevel=info \
+      --pool=threads \
+      --concurrency=4
     ;;
   beat)
     echo "Starting Celery beat..."
