@@ -2,15 +2,13 @@
 Celery tasks for match syncing and alert dispatch.
 """
 
-import logging
-
 from sqlalchemy import text
 
 from app.tasks.celery_app import celery_app
 from app.tasks.async_task import AsyncTask
+from app.core.logger import get_logger
 
-logger = logging.getLogger("app.tasks.alert_tasks")
-logger.setLevel(logging.DEBUG)
+logger = get_logger(__name__)
 
 
 # ───────────────────────────────────────────────────────────
@@ -79,6 +77,7 @@ async def _sync_matches():
 
 
 async def _dispatch_alerts():
+    logger.info("[_dispatch_alerts] coroutine started")
     from app.db.celery_session import CelerySessionLocal
     from app.models.models import AlertType
     from app.services.match_service import (
