@@ -35,6 +35,15 @@ async def trigger_sync(db: AsyncSession = Depends(get_db)):
     return {"status": "ok", "synced": results}
 
 
+@router.post("/dispatch-alerts", dependencies=[Depends(verify_admin_key)])
+async def trigger_dispatch():
+    """Manually trigger alert dispatch for all windows."""
+    from app.tasks.alert_tasks import dispatch_alerts_task
+
+    dispatch_alerts_task.delay()
+    return {"status": "ok", "message": "Alert dispatch queued"}
+
+
 @router.get("/upcoming-alerts", dependencies=[Depends(verify_admin_key)])
 async def preview_alerts(db: AsyncSession = Depends(get_db)):
     """Preview which matches are in each alert window right now (dry run)."""
