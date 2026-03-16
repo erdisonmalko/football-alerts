@@ -125,6 +125,36 @@ async def get_user_match_subscriptions(db: AsyncSession, user_id: int) -> set[st
     return set(result.scalars().all())
 
 
+async def update_live_and_recent_matches(db: AsyncSession) -> dict[str, int]:
+    """
+    Fetches today's matches for all leagues and updates status + scores
+    for any match already in the DB. Runs every 15 minutes.
+    """
+    from datetime import date
+
+    results = {}
+    for league in SUPPORTED_LEAGUES:
+        code = league["code"]
+        try:
+            todays_matches = await football_client.get_todays_matches(code)
+            updated = 0
+            for m in todays_matches:
+                existing = await db.execute(
+                    select(Match).where(Match.external_id == m["external_id"])
+                )
+                match = existing.scalar_one_or_none()
+                if match:
+                    match.status = m["status"]
+                    match.home_score = m.get("home_score")
+                    match.away_score = m.get("away_score")
+                    updated += 1
+            results[code] = updated
+        except Exception as exc:
+            logger.error(f"Failed to update live matches for {code}: {exc}")
+            results[code] = -1
+    return results
+
+
 # ── Cleanup ───────────────────────────────────────────────────────────────────
 
 
