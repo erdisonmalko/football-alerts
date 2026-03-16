@@ -2,17 +2,22 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import COOKIE_NAME, get_current_user
-from app.core.logger import get_logger
 from app.db.session import get_db
 from app.models.models import User
-from app.schemas.schemas import SubscriptionCreate, SubscriptionOut, UserOut, UserUpdate
+from app.schemas.schemas import (
+    SubscriptionCreate,
+    SubscriptionOut,
+    UserMatchesOut,
+    UserOut,
+    UserUpdate,
+)
+from app.services.match_service import get_matches_for_user
 from app.services.user_service import (
     create_subscription,
     delete_subscription,
     get_user_subscriptions,
 )
 
-logger = get_logger(__name__)
 router = APIRouter(prefix="/users", tags=["users"])
 
 
@@ -31,7 +36,6 @@ async def update_me(
         current_user.full_name = data.full_name
     await db.commit()
     await db.refresh(current_user)
-    logger.info(f"User updated: {current_user.email} (id={current_user.id})")
     return current_user
 
 
@@ -45,7 +49,18 @@ async def delete_me(
     await db.delete(current_user)
     await db.commit()
     response.delete_cookie(key=COOKIE_NAME, samesite="lax")
-    logger.warning(f"User deleted: {current_user.email} (id={current_user.id})")
+
+
+# ── User Matches ───────────────────────────────────────────────────────────────
+
+
+@router.get("/me/matches", response_model=UserMatchesOut)
+async def get_my_matches(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Returns live, upcoming, and today's finished matches for the user's subscriptions."""
+    return await get_matches_for_user(db, current_user.id)
 
 
 # ── Subscriptions ──────────────────────────────────────────────────────────────
