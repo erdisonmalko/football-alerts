@@ -44,6 +44,15 @@ async def trigger_dispatch():
     return {"status": "ok", "message": "Alert dispatch queued"}
 
 
+@router.post("/update-match-statuses", dependencies=[Depends(verify_admin_key)])
+async def trigger_update_statuses():
+    """Manually trigger live match status and score update."""
+    from app.tasks.alert_tasks import update_match_statuses_task
+
+    update_match_statuses_task.delay()
+    return {"status": "ok", "message": "Match status update queued"}
+
+
 @router.get("/upcoming-alerts", dependencies=[Depends(verify_admin_key)])
 async def preview_alerts(db: AsyncSession = Depends(get_db)):
     """Preview which matches are in each alert window right now (dry run)."""
