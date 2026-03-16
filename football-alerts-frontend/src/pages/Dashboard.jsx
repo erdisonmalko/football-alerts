@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import api from '../api/client'
 import Nav from '../components/Nav'
 import styles from './Dashboard.module.css'
+import { getMyMatches } from '../api/endpoints'
 
 const REFRESH_INTERVAL = 15 * 60 * 1000 // 15 minutes
 
@@ -80,7 +81,7 @@ export default function Dashboard() {
 
   const fetchMatches = useCallback(async () => {
     try {
-      const { data } = await api.get('/api/v1/users/me/matches')
+      const data = await getMyMatches()
       setMatches(data)
       setLastUpdated(new Date())
     } catch (err) {

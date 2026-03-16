@@ -53,3 +53,7 @@ export const getLeagues = () =>
 
 export const getTeamsByLeague = (code) =>
   api.get(`/football/leagues/${code}/teams`).then(r => r.data)
+
+// User matches (dashboard — live, upcoming, finished)
+export const getMyMatches = () =>
+  api.get('/users/me/matches').then(r => r.data)
