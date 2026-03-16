@@ -2,6 +2,7 @@
 Celery tasks for match syncing and alert dispatch.
 """
 
+import asyncio
 from sqlalchemy import text
 
 from app.tasks.celery_app import celery_app
@@ -131,7 +132,30 @@ async def _dispatch_alerts():
                             alert_type,
                             user.email,
                         )
+                        await asyncio.sleep(0.6)  # stay under 2 req/sec
 
         await db.commit()
 
     logger.info("[_dispatch_alerts] dispatch complete")
+
+
+@celery_app.task(
+    name="app.tasks.alert_tasks.update_match_statuses_task",
+    bind=True,
+    base=AsyncTask,
+    max_retries=3,
+)
+def update_match_statuses_task(self):
+    logger.info("[update_match_statuses_task] START")
+    return self.run_async(_update_match_statuses())
+
+
+async def _update_match_statuses():
+    logger.debug("[_update_match_statuses] Opening DB session")
+    from app.db.celery_session import CelerySessionLocal
+    from app.services.match_service import update_live_and_recent_matches
+
+    async with CelerySessionLocal() as db:
+        results = await update_live_and_recent_matches(db)
+        await db.commit()
+        logger.info("[_update_match_statuses] Updated: %s", results)

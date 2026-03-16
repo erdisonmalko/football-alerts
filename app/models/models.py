@@ -127,8 +127,12 @@ class Match(Base):
     matchday: Mapped[Optional[int]] = mapped_column(Integer)
     stage: Mapped[Optional[str]] = mapped_column(String(100))
 
-    # Status: SCHEDULED, LIVE, FINISHED, POSTPONED, CANCELLED
+    # Status: SCHEDULED, TIMED, IN_PLAY, PAUSED, FINISHED, POSTPONED, CANCELLED
     status: Mapped[str] = mapped_column(String(50), default="SCHEDULED")
+
+    # Scores (populated once match is in play or finished)
+    home_score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    away_score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     synced_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
