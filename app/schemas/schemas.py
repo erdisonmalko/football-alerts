@@ -85,6 +85,8 @@ class MatchOut(BaseModel):
     kickoff_utc: datetime
     matchday: Optional[int]
     status: str
+    home_score: Optional[int] = None
+    away_score: Optional[int] = None
 
     model_config = {"from_attributes": True}
 
@@ -101,6 +103,12 @@ class PaginatedMatches(BaseModel):
     page: int
     page_size: int
     total_pages: int
+
+
+class UserMatchesOut(BaseModel):
+    live: list[MatchOut]
+    upcoming: list[MatchOut]
+    finished: list[MatchOut]
 
 
 # ── Leagues & Teams (from football-data.org) ──────────────────────────────────

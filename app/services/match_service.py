@@ -153,6 +153,72 @@ async def update_live_and_recent_matches(db: AsyncSession) -> dict[str, int]:
     return results
 
 
+async def get_matches_for_user(
+    db: AsyncSession, user_id: int
+) -> dict[str, list[Match]]:
+    """
+    Returns matches relevant to the user based on their subscriptions.
+    Grouped into live, upcoming (next 14 days), and finished (today).
+    """
+    from app.models.models import Subscription, SubscriptionType
+
+    subs_result = await db.execute(
+        select(Subscription).where(Subscription.user_id == user_id)
+    )
+    subs = subs_result.scalars().all()
+
+    league_codes = [
+        s.external_id for s in subs if s.subscription_type == SubscriptionType.LEAGUE
+    ]
+    team_ids = [
+        int(s.external_id) for s in subs if s.subscription_type == SubscriptionType.TEAM
+    ]
+    match_ids = [
+        int(s.external_id)
+        for s in subs
+        if s.subscription_type == SubscriptionType.MATCH
+    ]
+
+    if not league_codes and not team_ids and not match_ids:
+        return {"live": [], "upcoming": [], "finished": []}
+
+    from sqlalchemy import or_
+
+    now = datetime.now(timezone.utc)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    filters = []
+    if league_codes:
+        filters.append(Match.league_code.in_(league_codes))
+    if team_ids:
+        filters.append(Match.home_team_id.in_(team_ids))
+        filters.append(Match.away_team_id.in_(team_ids))
+    if match_ids:
+        filters.append(Match.external_id.in_(match_ids))
+
+    result = await db.execute(
+        select(Match)
+        .where(
+            or_(*filters),
+            Match.kickoff_utc >= today_start,
+            Match.kickoff_utc <= now + timedelta(days=14),
+        )
+        .order_by(Match.kickoff_utc)
+    )
+    all_matches = result.scalars().all()
+
+    live, upcoming, finished = [], [], []
+    for m in all_matches:
+        if m.status in ("IN_PLAY", "PAUSED"):
+            live.append(m)
+        elif m.status in ("FINISHED", "AWARDED"):
+            finished.append(m)
+        elif m.status in ("SCHEDULED", "TIMED"):
+            upcoming.append(m)
+
+    return {"live": live, "upcoming": upcoming, "finished": finished}
+
+
 # ── Cleanup ───────────────────────────────────────────────────────────────────
 
 
