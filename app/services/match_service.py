@@ -130,8 +130,6 @@ async def update_live_and_recent_matches(db: AsyncSession) -> dict[str, int]:
     Fetches today's matches for all leagues and updates status + scores
     for any match already in the DB. Runs every 15 minutes.
     """
-    from datetime import date
-
     results = {}
     for league in SUPPORTED_LEAGUES:
         code = league["code"]
