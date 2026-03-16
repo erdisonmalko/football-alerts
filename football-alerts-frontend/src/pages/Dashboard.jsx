@@ -1,12 +1,13 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import api from '../api/client'
 import Nav from '../components/Nav'
+import Pagination from '../components/Pagination'
 import styles from './Dashboard.module.css'
 import { getMyMatches } from '../api/endpoints'
 
-const REFRESH_INTERVAL = 15 * 60 * 1000 // 15 minutes
+const REFRESH_INTERVAL = 15 * 60 * 1000
+const PAGE_SIZES = { live: 5, upcoming: 20, finished: 10 }
 
 function formatKickoff(dateStr) {
   const d = new Date(dateStr)
@@ -42,15 +43,11 @@ function MatchRow({ match, section }) {
 
       <div className={styles.matchTeams}>
         <span className={styles.teamName}>{match.home_team_name}</span>
-
         {(isLive || isFinished) && match.home_score !== null ? (
-          <span className={styles.score}>
-            {match.home_score} — {match.away_score}
-          </span>
+          <span className={styles.score}>{match.home_score} — {match.away_score}</span>
         ) : (
           <span className={styles.vs}>VS</span>
         )}
-
         <span className={styles.teamName}>{match.away_team_name}</span>
       </div>
 
@@ -70,6 +67,28 @@ function MatchRow({ match, section }) {
         )}
       </div>
     </div>
+  )
+}
+
+function Section({ title, matches, section, pageSize, titleClass }) {
+  const [page, setPage] = useState(1)
+  const totalPages = Math.max(1, Math.ceil(matches.length / pageSize))
+  const paged = matches.slice((page - 1) * pageSize, page * pageSize)
+
+  if (matches.length === 0) return null
+
+  return (
+    <section className={styles.section}>
+      <h2 className={`${styles.sectionTitle} ${titleClass || ''}`}>
+        {title}
+      </h2>
+      <div className={styles.matchList}>
+        {paged.map(m => (
+          <MatchRow key={m.external_id} match={m} section={section} />
+        ))}
+      </div>
+      <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+    </section>
   )
 }
 
@@ -138,40 +157,24 @@ export default function Dashboard() {
           </div>
         ) : (
           <>
-            {matches.live.length > 0 && (
-              <section className={styles.section}>
-                <h2 className={styles.sectionTitle}>
-                  <span className={styles.liveIndicator}>●</span> LIVE NOW
-                </h2>
-                <div className={styles.matchList}>
-                  {matches.live.map(m => (
-                    <MatchRow key={m.external_id} match={m} section="live" />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {matches.upcoming.length > 0 && (
-              <section className={styles.section}>
-                <h2 className={styles.sectionTitle}>UPCOMING</h2>
-                <div className={styles.matchList}>
-                  {matches.upcoming.map(m => (
-                    <MatchRow key={m.external_id} match={m} section="upcoming" />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {matches.finished.length > 0 && (
-              <section className={styles.section}>
-                <h2 className={styles.sectionTitle}>TODAY'S RESULTS</h2>
-                <div className={styles.matchList}>
-                  {matches.finished.map(m => (
-                    <MatchRow key={m.external_id} match={m} section="finished" />
-                  ))}
-                </div>
-              </section>
-            )}
+            <Section
+              title={<><span className={styles.liveIndicator}>●</span> LIVE NOW</>}
+              matches={matches.live}
+              section="live"
+              pageSize={PAGE_SIZES.live}
+            />
+            <Section
+              title="UPCOMING"
+              matches={matches.upcoming}
+              section="upcoming"
+              pageSize={PAGE_SIZES.upcoming}
+            />
+            <Section
+              title="TODAY'S RESULTS"
+              matches={matches.finished}
+              section="finished"
+              pageSize={PAGE_SIZES.finished}
+            />
           </>
         )}
 
