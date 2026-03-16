@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import {
   getSubscriptions, addSubscription, removeSubscription,
   getLeagues, getTeamsByLeague, getUpcomingMatches,
 } from '../api/endpoints'
 import Nav from '../components/Nav'
 import Pagination from '../components/Pagination'
+import FilterChips from '../components/FilterChips'
 import styles from './Subscriptions.module.css'
 
 const MATCH_PAGE_SIZE = 15
@@ -15,7 +16,6 @@ function formatKickoff(dateStr) {
     + ' ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
 }
 
-// Simple client-side paginator for short static lists (leagues, teams)
 function usePaged(items, pageSize = 12) {
   const [page, setPage] = useState(1)
   const totalPages = Math.max(1, Math.ceil(items.length / pageSize))
@@ -24,40 +24,102 @@ function usePaged(items, pageSize = 12) {
   return { paged, page, setPage, totalPages, reset }
 }
 
+function LoadingBar() {
+  return (
+    <div className={styles.loadingWrap}>
+      <div className={styles.loadingBar} />
+    </div>
+  )
+}
+
+const ALERT_TYPE_OPTIONS = [
+  { value: 'league', label: 'LEAGUE' },
+  { value: 'team', label: 'TEAM' },
+  { value: 'match', label: 'MATCH' },
+]
+
 export default function Subscriptions() {
   const [subscriptions, setSubscriptions] = useState([])
   const [leagues, setLeagues] = useState([])
   const [teams, setTeams] = useState([])
   const [matches, setMatches] = useState([])
-  const [matchTotal, setMatchTotal] = useState(0)
   const [matchTotalPages, setMatchTotalPages] = useState(1)
   const [matchPage, setMatchPage] = useState(1)
   const [selectedLeague, setSelectedLeague] = useState(null)
-  const [tab, setTab] = useState('leagues')
+  const [tab, setTab] = useState('upcoming')
+  const [leagueView, setLeagueView] = useState('leagues')
+  const [loadingInit, setLoadingInit] = useState(true)
   const [loadingTeams, setLoadingTeams] = useState(false)
   const [loadingMatches, setLoadingMatches] = useState(false)
   const [adding, setAdding] = useState(null)
   const [removing, setRemoving] = useState(null)
   const [error, setError] = useState('')
 
-  // Active subscriptions pagination (client-side)
-  const [subPage, setSubPage] = useState(1)
-  const SUB_PAGE_SIZE = 10
-  const subTotalPages = Math.max(1, Math.ceil(subscriptions.length / SUB_PAGE_SIZE))
-  const pagedSubs = subscriptions.slice((subPage - 1) * SUB_PAGE_SIZE, subPage * SUB_PAGE_SIZE)
+  // Filters
+  const [upcomingLeagueFilter, setUpcomingLeagueFilter] = useState(new Set())
+  const [activeTypeFilter, setActiveTypeFilter] = useState(new Set())
 
-  // League + team pagination (client-side, lists are small)
+  const SUB_PAGE_SIZE = 10
+  const [subPage, setSubPage] = useState(1)
+
   const leaguePager = usePaged(leagues, 12)
   const teamPager = usePaged(teams, 15)
 
+  const fetchMatches = async (page) => {
+    setLoadingMatches(true)
+    try {
+      const params = new URLSearchParams({ page, page_size: MATCH_PAGE_SIZE })
+      const data = await getUpcomingMatches(`?${params}`)
+      setMatches(data.items)
+      setMatchTotalPages(data.total_pages)
+    } catch {
+      setError('Failed to load matches')
+    } finally {
+      setLoadingMatches(false)
+    }
+  }
+
   useEffect(() => {
-    getSubscriptions().then(setSubscriptions)
-    getLeagues().then(setLeagues)
+    Promise.all([
+      getSubscriptions(),
+      getLeagues(),
+      fetchMatches(1),
+    ]).then(([subs, lgs]) => {
+      setSubscriptions(subs)
+      setLeagues(lgs)
+    }).finally(() => setLoadingInit(false))
   }, [])
+
+  // Dynamic league options from loaded matches
+  const upcomingLeagueOptions = useMemo(() => {
+    const codes = [...new Set(matches.map(m => m.league_code))].sort()
+    return codes.map(code => ({ value: code, label: code }))
+  }, [matches])
+
+  // Filtered upcoming matches
+  const filteredMatches = useMemo(() => {
+    if (upcomingLeagueFilter.size === 0) return matches
+    return matches.filter(m => upcomingLeagueFilter.has(m.league_code))
+  }, [matches, upcomingLeagueFilter])
+
+  // Filtered active subscriptions
+  const filteredSubs = useMemo(() => {
+    if (activeTypeFilter.size === 0) return subscriptions
+    return subscriptions.filter(s => activeTypeFilter.has(s.subscription_type))
+  }, [subscriptions, activeTypeFilter])
+
+  const subTotalPages = Math.max(1, Math.ceil(filteredSubs.length / SUB_PAGE_SIZE))
+  const pagedSubs = filteredSubs.slice((subPage - 1) * SUB_PAGE_SIZE, subPage * SUB_PAGE_SIZE)
+
+  const handleTabChange = (newTab) => {
+    setTab(newTab)
+    setError('')
+    if (newTab === 'leagues') setLeagueView('leagues')
+  }
 
   const loadTeams = async (league) => {
     setSelectedLeague(league)
-    setTab('teams')
+    setLeagueView('teams')
     teamPager.reset()
     setLoadingTeams(true)
     try {
@@ -68,26 +130,6 @@ export default function Subscriptions() {
     } finally {
       setLoadingTeams(false)
     }
-  }
-
-  const fetchMatches = async (page) => {
-    setLoadingMatches(true)
-    try {
-      const params = new URLSearchParams({ page, page_size: MATCH_PAGE_SIZE })
-      const data = await getUpcomingMatches(`?${params}`)
-      setMatches(data.items)
-      setMatchTotal(data.total)
-      setMatchTotalPages(data.total_pages)
-    } catch {
-      setError('Failed to load matches')
-    } finally {
-      setLoadingMatches(false)
-    }
-  }
-
-  const loadMatches = async () => {
-    setTab('matches')
-    if (matches.length === 0) await fetchMatches(1)
   }
 
   const handleMatchPage = async (p) => {
@@ -127,7 +169,6 @@ export default function Subscriptions() {
           String(m.external_id) === sub.external_id ? { ...m, is_subscribed: false } : m
         ))
       }
-      // If removing last item on this sub page, go back one
       if (pagedSubs.length === 1 && subPage > 1) setSubPage(p => p - 1)
     } catch {
       setError('Failed to remove subscription')
@@ -138,6 +179,12 @@ export default function Subscriptions() {
 
   const getSubId = (type, externalId) =>
     subscriptions.find(s => s.subscription_type === type && s.external_id === String(externalId))?.id
+
+  const TABS = [
+    { key: 'upcoming', label: 'UPCOMING' },
+    { key: 'leagues', label: 'LEAGUES' },
+    { key: 'active', label: 'ACTIVE ALERTS', count: subscriptions.length },
+  ]
 
   return (
     <div className={styles.page}>
@@ -153,203 +200,225 @@ export default function Subscriptions() {
 
         {error && <p className={styles.error}>{error}</p>}
 
-        <div className={styles.layout}>
-
-          {/* Left: Browse */}
-          <div className={styles.browser}>
+        {loadingInit ? (
+          <LoadingBar />
+        ) : (
+          <>
             <div className={styles.tabs}>
-              <button
-                className={`${styles.tab} ${tab === 'leagues' ? styles.tabActive : ''}`}
-                onClick={() => setTab('leagues')}
-              >
-                LEAGUES
-              </button>
-              <button
-                className={`${styles.tab} ${tab === 'matches' ? styles.tabActive : ''}`}
-                onClick={loadMatches}
-              >
-                MATCHES
-              </button>
+              {TABS.map(t => (
+                <button
+                  key={t.key}
+                  className={`${styles.tab} ${tab === t.key ? styles.tabActive : ''}`}
+                  onClick={() => handleTabChange(t.key)}
+                >
+                  {t.label}
+                  {t.count > 0 && (
+                    <span className={`${styles.tabBadge} ${tab === t.key ? styles.tabBadgeActive : ''}`}>
+                      {t.count}
+                    </span>
+                  )}
+                </button>
+              ))}
             </div>
+
+            {/* UPCOMING tab */}
+            {tab === 'upcoming' && (
+              <div className={styles.panel}>
+                <FilterChips
+                  label="FILTER BY LEAGUE"
+                  options={upcomingLeagueOptions}
+                  selected={upcomingLeagueFilter}
+                  onChange={(next) => { setUpcomingLeagueFilter(next); setMatchPage(1) }}
+                />
+                {loadingMatches ? (
+                  <LoadingBar />
+                ) : filteredMatches.length === 0 ? (
+                  <p className={styles.empty}>No matches found.</p>
+                ) : (
+                  <>
+                    <div className={styles.list}>
+                      {filteredMatches.map(match => {
+                        const subscribed = isSubscribed('match', match.external_id)
+                        const key = `match-${match.external_id}`
+                        const subRecord = subscriptions.find(
+                          s => s.subscription_type === 'match' && s.external_id === String(match.external_id)
+                        )
+                        return (
+                          <div key={match.external_id} className={styles.item}>
+                            <div className={styles.itemInfo}>
+                              <p className={styles.itemName}>
+                                {match.home_team_name} vs {match.away_team_name}
+                              </p>
+                              <p className={styles.itemMeta}>
+                                {match.league_code} — {formatKickoff(match.kickoff_utc)}
+                              </p>
+                            </div>
+                            {subscribed ? (
+                              <button
+                                className={styles.removeBtn}
+                                onClick={() => handleRemove(getSubId('match', match.external_id), subRecord)}
+                                disabled={removing === getSubId('match', match.external_id)}
+                              >
+                                {removing === getSubId('match', match.external_id) ? '...' : 'REMOVE'}
+                              </button>
+                            ) : (
+                              <button
+                                className={styles.addBtn}
+                                onClick={() => handleAdd('match', match.external_id, `${match.home_team_name} vs ${match.away_team_name}`)}
+                                disabled={adding === key}
+                              >
+                                {adding === key ? '...' : '+ ALERT'}
+                              </button>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                    {upcomingLeagueFilter.size === 0 && (
+                      <Pagination page={matchPage} totalPages={matchTotalPages} onChange={handleMatchPage} />
+                    )}
+                  </>
+                )}
+              </div>
+            )}
 
             {/* LEAGUES tab */}
             {tab === 'leagues' && (
-              <>
-                <div className={styles.list}>
-                  {leaguePager.paged.map(lg => {
-                    const subscribed = isSubscribed('league', lg.code)
-                    const key = `league-${lg.code}`
-                    return (
-                      <div key={lg.code} className={styles.item}>
-                        <div className={styles.itemInfo}>
-                          <p className={styles.itemName}>{lg.name}</p>
-                          <p className={styles.itemMeta}>{lg.country} — {lg.code}</p>
-                        </div>
-                        <div className={styles.itemActions}>
-                          <button className={styles.browseBtn} onClick={() => loadTeams(lg)}>
-                            TEAMS
-                          </button>
-                          {subscribed ? (
-                            <button
-                              className={styles.removeBtn}
-                              onClick={() => handleRemove(getSubId('league', lg.code))}
-                              disabled={removing === getSubId('league', lg.code)}
-                            >
-                              {removing === getSubId('league', lg.code) ? '...' : 'REMOVE'}
-                            </button>
-                          ) : (
-                            <button
-                              className={styles.addBtn}
-                              onClick={() => handleAdd('league', lg.code, lg.name)}
-                              disabled={adding === key}
-                            >
-                              {adding === key ? '...' : '+ ALERT'}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-                <Pagination page={leaguePager.page} totalPages={leaguePager.totalPages} onChange={leaguePager.setPage} />
-              </>
-            )}
-
-            {/* TEAMS tab - shown when user clicks TEAMS on a league row */}
-            {tab === 'teams' && (
-              <>
-                <div className={styles.teamsHeader}>
-                  <button className={styles.backBtn} onClick={() => setTab('leagues')}>
-                    BACK
-                  </button>
-                  <span className={styles.teamsLeagueName}>
-                    {selectedLeague?.name.toUpperCase()} TEAMS
-                  </span>
-                </div>
-                <div className={styles.list}>
-                  {loadingTeams ? (
-                    <p className={styles.loading}>Loading teams...</p>
-                  ) : teamPager.paged.map(team => {
-                    const subscribed = isSubscribed('team', team.id)
-                    const key = `team-${team.id}`
-                    return (
-                      <div key={team.id} className={styles.item}>
-                        <div className={styles.itemInfo}>
-                          <p className={styles.itemName}>{team.name}</p>
-                          {team.short_name && <p className={styles.itemMeta}>{team.short_name}</p>}
-                        </div>
-                        {subscribed ? (
-                          <button
-                            className={styles.removeBtn}
-                            onClick={() => handleRemove(getSubId('team', team.id))}
-                            disabled={removing === getSubId('team', team.id)}
-                          >
-                            {removing === getSubId('team', team.id) ? '...' : 'REMOVE'}
-                          </button>
-                        ) : (
-                          <button
-                            className={styles.addBtn}
-                            onClick={() => handleAdd('team', team.id, team.name)}
-                            disabled={adding === key}
-                          >
-                            {adding === key ? '...' : '+ ALERT'}
-                          </button>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-                {!loadingTeams && (
-                  <Pagination page={teamPager.page} totalPages={teamPager.totalPages} onChange={teamPager.setPage} />
-                )}
-              </>
-            )}
-
-            {/* MATCHES tab */}
-            {tab === 'matches' && (
-              <>
-                <div className={styles.list}>
-                  {loadingMatches ? (
-                    <p className={styles.loading}>Loading matches...</p>
-                  ) : matches.map(match => {
-                    const subscribed = isSubscribed('match', match.external_id)
-                    const key = `match-${match.external_id}`
-                    return (
-                      <div key={match.external_id} className={styles.item}>
-                        <div className={styles.itemInfo}>
-                          <p className={styles.itemName}>
-                            {match.home_team_name} vs {match.away_team_name}
-                          </p>
-                          <p className={styles.itemMeta}>
-                            {match.league_code} — {formatKickoff(match.kickoff_utc)}
-                          </p>
-                        </div>
-                        {subscribed ? (
-                          <button
-                            className={styles.removeBtn}
-                            onClick={() => handleRemove(
-                              getSubId('match', match.external_id),
-                              subscriptions.find(s => s.subscription_type === 'match' && s.external_id === String(match.external_id))
-                            )}
-                            disabled={removing === getSubId('match', match.external_id)}
-                          >
-                            {removing === getSubId('match', match.external_id) ? '...' : 'REMOVE'}
-                          </button>
-                        ) : (
-                          <button
-                            className={styles.addBtn}
-                            onClick={() => handleAdd('match', match.external_id, `${match.home_team_name} vs ${match.away_team_name}`)}
-                            disabled={adding === key}
-                          >
-                            {adding === key ? '...' : '+ ALERT'}
-                          </button>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-                {!loadingMatches && (
-                  <Pagination page={matchPage} totalPages={matchTotalPages} onChange={handleMatchPage} />
-                )}
-              </>
-            )}
-          </div>
-
-          {/* Right: Active subscriptions */}
-          <div className={styles.active}>
-            <p className={styles.activeLabel}>
-              ACTIVE ALERTS
-              {subscriptions.length > 0 && (
-                <span className={styles.activeBadge}>{subscriptions.length}</span>
-              )}
-            </p>
-            {subscriptions.length === 0 ? (
-              <p className={styles.noSubs}>No alerts yet. Add leagues, teams, or matches.</p>
-            ) : (
-              <>
-                <div className={styles.subList}>
-                  {pagedSubs.map(sub => (
-                    <div key={sub.id} className={styles.subItem}>
-                      <div>
-                        <span className={styles.subType}>{sub.subscription_type}</span>
-                        <p className={styles.subName}>{sub.display_name}</p>
-                      </div>
-                      <button
-                        className={styles.removeSm}
-                        onClick={() => handleRemove(sub.id, sub)}
-                        disabled={removing === sub.id}
-                      >
-                        {removing === sub.id ? '...' : 'X'}
-                      </button>
+              <div className={styles.panel}>
+                {leagueView === 'leagues' ? (
+                  <>
+                    <div className={styles.list}>
+                      {leaguePager.paged.map(lg => {
+                        const subscribed = isSubscribed('league', lg.code)
+                        const key = `league-${lg.code}`
+                        return (
+                          <div key={lg.code} className={styles.item}>
+                            <div className={styles.itemInfo}>
+                              <p className={styles.itemName}>{lg.name}</p>
+                              <p className={styles.itemMeta}>{lg.country} — {lg.code}</p>
+                            </div>
+                            <div className={styles.itemActions}>
+                              <button className={styles.browseBtn} onClick={() => loadTeams(lg)}>
+                                TEAMS
+                              </button>
+                              {subscribed ? (
+                                <button
+                                  className={styles.removeBtn}
+                                  onClick={() => handleRemove(getSubId('league', lg.code))}
+                                  disabled={removing === getSubId('league', lg.code)}
+                                >
+                                  {removing === getSubId('league', lg.code) ? '...' : 'REMOVE'}
+                                </button>
+                              ) : (
+                                <button
+                                  className={styles.addBtn}
+                                  onClick={() => handleAdd('league', lg.code, lg.name)}
+                                  disabled={adding === key}
+                                >
+                                  {adding === key ? '...' : '+ ALERT'}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
-                  ))}
-                </div>
-                <Pagination page={subPage} totalPages={subTotalPages} onChange={setSubPage} />
-              </>
+                    <Pagination page={leaguePager.page} totalPages={leaguePager.totalPages} onChange={leaguePager.setPage} />
+                  </>
+                ) : (
+                  <>
+                    <div className={styles.subViewHeader}>
+                      <button className={styles.backBtn} onClick={() => setLeagueView('leagues')}>
+                        ← BACK
+                      </button>
+                      <span className={styles.subViewTitle}>
+                        {selectedLeague?.name.toUpperCase()} — TEAMS
+                      </span>
+                    </div>
+                    <div className={styles.list}>
+                      {loadingTeams ? (
+                        <LoadingBar />
+                      ) : teamPager.paged.map(team => {
+                        const subscribed = isSubscribed('team', team.id)
+                        const key = `team-${team.id}`
+                        return (
+                          <div key={team.id} className={styles.item}>
+                            <div className={styles.itemInfo}>
+                              <p className={styles.itemName}>{team.name}</p>
+                              {team.short_name && <p className={styles.itemMeta}>{team.short_name}</p>}
+                            </div>
+                            {subscribed ? (
+                              <button
+                                className={styles.removeBtn}
+                                onClick={() => handleRemove(getSubId('team', team.id))}
+                                disabled={removing === getSubId('team', team.id)}
+                              >
+                                {removing === getSubId('team', team.id) ? '...' : 'REMOVE'}
+                              </button>
+                            ) : (
+                              <button
+                                className={styles.addBtn}
+                                onClick={() => handleAdd('team', team.id, team.name)}
+                                disabled={adding === key}
+                              >
+                                {adding === key ? '...' : '+ ALERT'}
+                              </button>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                    {!loadingTeams && (
+                      <Pagination page={teamPager.page} totalPages={teamPager.totalPages} onChange={teamPager.setPage} />
+                    )}
+                  </>
+                )}
+              </div>
             )}
-          </div>
 
-        </div>
+            {/* ACTIVE ALERTS tab */}
+            {tab === 'active' && (
+              <div className={styles.panel}>
+                <FilterChips
+                  label="FILTER BY TYPE"
+                  options={ALERT_TYPE_OPTIONS}
+                  selected={activeTypeFilter}
+                  onChange={(next) => { setActiveTypeFilter(next); setSubPage(1) }}
+                  color="neutral"
+                />
+                {filteredSubs.length === 0 ? (
+                  <p className={styles.empty}>
+                    {subscriptions.length === 0
+                      ? 'No alerts yet. Add leagues, teams, or matches.'
+                      : 'No alerts match the selected filter.'}
+                  </p>
+                ) : (
+                  <>
+                    <div className={styles.list}>
+                      {pagedSubs.map(sub => (
+                        <div key={sub.id} className={styles.item}>
+                          <div className={styles.itemInfo}>
+                            <span className={styles.subType}>{sub.subscription_type}</span>
+                            <p className={styles.itemName}>{sub.display_name}</p>
+                          </div>
+                          <button
+                            className={styles.removeBtn}
+                            onClick={() => handleRemove(sub.id, sub)}
+                            disabled={removing === sub.id}
+                          >
+                            {removing === sub.id ? '...' : 'REMOVE'}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <Pagination page={subPage} totalPages={subTotalPages} onChange={setSubPage} />
+                  </>
+                )}
+              </div>
+            )}
+          </>
+        )}
+
       </main>
     </div>
   )

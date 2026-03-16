@@ -4,7 +4,7 @@
 }
 
 .main {
-  max-width: 1000px;
+  max-width: 960px;
   margin: 0 auto;
   padding: 3rem 2rem;
 }
@@ -42,55 +42,95 @@
   margin-bottom: 1.5rem;
 }
 
-.layout {
-  display: grid;
-  grid-template-columns: 1fr 300px;
-  gap: 2rem;
-  align-items: start;
+/* Loading */
+.loadingWrap {
+  padding: 2rem 0;
 }
 
-/* Browser panel */
-.browser {
-  border: 1px solid var(--border);
+.loadingBar {
+  height: 2px;
+  background: var(--border);
+  position: relative;
+  overflow: hidden;
 }
 
+.loadingBar::after {
+  content: '';
+  position: absolute;
+  left: -40%;
+  width: 40%;
+  height: 100%;
+  background: var(--accent);
+  animation: slide 1s ease-in-out infinite;
+}
+
+@keyframes slide {
+  to { left: 100%; }
+}
+
+/* Tabs */
 .tabs {
   display: flex;
+  gap: 0;
+  margin-bottom: 1.5rem;
   border-bottom: 1px solid var(--border);
 }
 
 .tab {
-  flex: 1;
-  padding: 0.75rem 1rem;
   background: transparent;
+  color: var(--text-3);
   font-family: var(--font-display);
   font-size: 0.7rem;
   font-weight: 700;
-  letter-spacing: 0.15em;
-  color: var(--text-3);   /* brighter */
-  border-right: 1px solid var(--border);
+  letter-spacing: 0.12em;
+  padding: 0.6rem 1.25rem;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
   transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 
-.tab:last-child { border-right: none; }
-.tab:hover:not(:disabled) { color: var(--text-2); background: var(--bg-3); }
-.tab:disabled { opacity: 0.35; cursor: not-allowed; }
+.tab:hover { color: var(--text-2); }
 
 .tabActive {
-  color: var(--accent);
-  background: var(--bg-2);
+  color: var(--text);
+  border-bottom-color: var(--accent);
 }
 
-.list {
-  max-height: 520px;
-  overflow-y: auto;
-}
-
-.loading {
-  padding: 2rem;
-  text-align: center;
-  font-size: 0.85rem;
+.tabBadge {
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 0.1rem 0.35rem;
+  background: var(--bg-3);
   color: var(--text-3);
+  border-radius: 2px;
+}
+
+.tabBadgeActive {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+/* Panel */
+.panel {
+  border: 1px solid var(--border);
+}
+
+.empty {
+  padding: 3rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--text-3);
+}
+
+/* List */
+.list {
+  display: flex;
+  flex-direction: column;
 }
 
 .item {
@@ -118,7 +158,7 @@
 
 .itemMeta {
   font-size: 0.75rem;
-  color: var(--text-3);   /* brighter than before */
+  color: var(--text-3);
   margin-top: 0.15rem;
 }
 
@@ -128,15 +168,26 @@
   flex-shrink: 0;
 }
 
+.subType {
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+/* Buttons */
 .browseBtn {
   background: transparent;
-  color: var(--text-2);   /* brighter */
+  color: var(--text-2);
   font-family: var(--font-display);
   font-size: 0.65rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   padding: 0.3rem 0.6rem;
-  border: 1px solid var(--border-2);  /* brighter */
+  border: 1px solid var(--border-2);
   transition: all 0.15s;
 }
 
@@ -177,111 +228,12 @@
 .removeBtn:hover:not(:disabled) { background: var(--danger); color: #fff; }
 .removeBtn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-/* Active subscriptions panel */
-.active {
-  border: 1px solid var(--border);
-  position: sticky;
-  top: 80px;
-}
-
-.activeLabel {
-  font-family: var(--font-display);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  color: var(--text-2);   /* brighter */
+/* Sub view header (teams drill-down) */
+.subViewHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   padding: 0.75rem 1.25rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-2);
-}
-
-.noSubs {
-  padding: 1.5rem 1.25rem;
-  font-size: 0.8rem;
-  color: var(--text-3);
-  line-height: 1.5;
-}
-
-.subList {
-  max-height: 460px;
-  overflow-y: auto;
-}
-
-.subItem {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.875rem 1.25rem;
-  border-bottom: 1px solid var(--border);
-  gap: 0.75rem;
-}
-
-.subItem:last-child { border-bottom: none; }
-
-.subType {
-  font-family: var(--font-display);
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  color: var(--accent);
-  display: block;
-  margin-bottom: 0.2rem;
-}
-
-.subName {
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: var(--text);
-}
-
-.removeSm {
-  background: transparent;
-  color: var(--text-3);
-  font-family: var(--font-display);
-  font-size: 0.65rem;
-  font-weight: 700;
-  padding: 0.25rem 0.5rem;
-  border: 1px solid var(--border-2);  /* brighter */
-  transition: all 0.15s;
-  flex-shrink: 0;
-}
-
-.removeSm:hover:not(:disabled) {
-  border-color: var(--danger);
-  color: var(--danger);
-}
-
-@media (max-width: 700px) {
-  .layout {
-    grid-template-columns: 1fr;
-  }
-  .active {
-    position: static;
-  }
-}
-
-.activeBadge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--accent);
-  color: #000;
-  font-size: 0.6rem;
-  font-weight: 800;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 4px;
-  border-radius: 9px;
-  margin-left: 0.5rem;
-  vertical-align: middle;
-}
-
-/* Teams sub-view header */
-.teamsHeader {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.6rem 1rem;
   border-bottom: 1px solid var(--border);
   background: var(--bg-2);
 }
@@ -304,10 +256,16 @@
   border-color: var(--text-3);
 }
 
-.teamsLeagueName {
+.subViewTitle {
   font-family: var(--font-display);
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   color: var(--text-2);
+}
+
+@media (max-width: 700px) {
+  .tabs { overflow-x: auto; }
+  .tab { padding: 0.6rem 0.9rem; white-space: nowrap; }
+  .title { font-size: 2rem; }
 }

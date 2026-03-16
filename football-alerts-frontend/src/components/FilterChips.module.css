@@ -1,0 +1,97 @@
+.wrap {
+  margin-bottom: 1.25rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.6rem;
+}
+
+.label {
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--text-4);
+}
+
+.clearBtn {
+  background: transparent;
+  color: var(--text-4);
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.clearBtn:hover {
+  color: var(--danger);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: transparent;
+  color: var(--text-3);
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 0.25rem 0.65rem;
+  border: 1px solid var(--border-2);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.chip:hover {
+  color: var(--text-2);
+  border-color: var(--text-3);
+}
+
+/* Accent variant (default) — used for leagues */
+.chipActive {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.chipActive:hover {
+  background: var(--accent);
+  color: #000;
+}
+
+/* Neutral variant — used for alert types */
+.chipNeutral:hover {
+  color: var(--text-2);
+  border-color: var(--text-3);
+}
+
+.chipNeutralActive {
+  background: var(--bg-3);
+  color: var(--text);
+  border-color: var(--text-2);
+}
+
+.chipNeutralActive:hover {
+  background: var(--bg-2);
+}
+
+.chipCheck {
+  font-size: 0.55rem;
+  line-height: 1;
+}
