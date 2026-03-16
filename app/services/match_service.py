@@ -184,7 +184,7 @@ async def get_matches_due_for_alerts(
         select(Match).where(
             Match.kickoff_utc >= window_start,
             Match.kickoff_utc <= window_end,
-            Match.status == "SCHEDULED",
+            Match.status.in_(["SCHEDULED", "TIMED"]),
         )
     )
     matches = list(result.scalars().all())
