@@ -19,7 +19,9 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 
 def verify_admin_key(x_admin_key: str = Header(...)):
     if x_admin_key != settings.ADMIN_KEY:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid admin key")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Invalid admin key"
+        )
     logger.info("Admin key verified.")
 
 
@@ -37,6 +39,7 @@ async def trigger_sync(db: AsyncSession = Depends(get_db)):
 async def trigger_dispatch():
     """Manually trigger alert dispatch for all windows."""
     from app.tasks.alert_tasks import dispatch_alerts_task
+
     dispatch_alerts_task.delay()
     return {"status": "ok", "message": "Alert dispatch queued"}
 
@@ -45,6 +48,7 @@ async def trigger_dispatch():
 async def trigger_update_statuses():
     """Manually trigger live match status and score update."""
     from app.tasks.alert_tasks import update_match_statuses_task
+
     update_match_statuses_task.delay()
     return {"status": "ok", "message": "Match status update queued"}
 
@@ -53,6 +57,7 @@ async def trigger_update_statuses():
 async def trigger_sync_calendars():
     """Manually trigger Google Calendar sync for all connected users."""
     from app.tasks.alert_tasks import sync_calendar_task
+
     sync_calendar_task.delay()
     return {"status": "ok", "message": "Calendar sync queued"}
 
