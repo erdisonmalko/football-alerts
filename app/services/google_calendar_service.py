@@ -20,7 +20,9 @@ from app.models.models import GoogleToken, Match, User
 
 logger = get_logger(__name__)
 
-SCOPES = ["https://www.googleapis.com/auth/calendar"]
+# SCOPES = ["https://www.googleapis.com/auth/calendar"]
+# less privileged scope that only allows managing events, not full calendar access
+SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
 CALENDAR_ID = "primary"
 
 
