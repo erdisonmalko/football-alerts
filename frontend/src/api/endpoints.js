@@ -65,7 +65,7 @@ export const getGoogleStatus = () =>
 
 export const connectGoogle = () => {
   // Redirect browser to backend OAuth flow
-  window.location.href = `${import.meta.env.VITE_API_URL}/api/v1/auth/google/connect`
+  window.location.href = `${import.meta.env.VITE_API_URL}/auth/google/connect`
 }
 
 export const disconnectGoogle = () =>
