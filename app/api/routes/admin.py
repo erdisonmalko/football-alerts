@@ -53,6 +53,15 @@ async def trigger_update_statuses():
     return {"status": "ok", "message": "Match status update queued"}
 
 
+@router.post("/sync-calendars", dependencies=[Depends(verify_admin_key)])
+async def trigger_sync_calendars():
+    """Manually trigger Google Calendar sync for all connected users."""
+    from app.tasks.alert_tasks import sync_calendar_task
+
+    sync_calendar_task.delay()
+    return {"status": "ok", "message": "Calendar sync queued"}
+
+
 @router.get("/upcoming-alerts", dependencies=[Depends(verify_admin_key)])
 async def preview_alerts(db: AsyncSession = Depends(get_db)):
     """Preview which matches are in each alert window right now (dry run)."""
