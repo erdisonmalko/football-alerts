@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { updateProfile, deleteAccount } from '../api/endpoints'
+import { updateProfile, deleteAccount, getGoogleStatus, connectGoogle, disconnectGoogle } from '../api/endpoints'
 import styles from './Nav.module.css'
 
 export default function Nav() {
@@ -14,9 +14,32 @@ export default function Nav() {
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [googleConnected, setGoogleConnected] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
   const dropdownRef = useRef(null)
 
-  // Close dropdown on outside click
+  // Check Google status when dropdown opens
+  useEffect(() => {
+    if (open) {
+      getGoogleStatus()
+        .then(data => setGoogleConnected(data.connected))
+        .catch(() => {})
+    }
+  }, [open])
+
+  // Handle redirect back from Google OAuth
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const googleParam = params.get('google')
+    if (googleParam === 'connected') {
+      setGoogleConnected(true)
+      // Clean up URL
+      navigate(location.pathname, { replace: true })
+    } else if (googleParam === 'error') {
+      navigate(location.pathname, { replace: true })
+    }
+  }, [location, navigate])
+
   useEffect(() => {
     const handler = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -51,6 +74,22 @@ export default function Nav() {
     }
   }
 
+  const handleGoogleConnect = () => {
+    connectGoogle() // redirects browser
+  }
+
+  const handleGoogleDisconnect = async () => {
+    setGoogleLoading(true)
+    try {
+      await disconnectGoogle()
+      setGoogleConnected(false)
+    } catch {
+      // ignore
+    } finally {
+      setGoogleLoading(false)
+    }
+  }
+
   const handleDelete = async () => {
     setDeleting(true)
     try {
@@ -81,7 +120,6 @@ export default function Nav() {
         </Link>
       </div>
 
-      {/* Profile dropdown */}
       <div className={styles.profileWrap} ref={dropdownRef}>
         <button
           className={`${styles.profileBtn} ${open ? styles.profileBtnOpen : ''}`}
@@ -96,7 +134,6 @@ export default function Nav() {
 
         {open && (
           <div className={styles.dropdown}>
-            {/* Header */}
             <div className={styles.dropHeader}>
               <p className={styles.dropEmail}>{user?.email}</p>
               <p className={styles.dropJoined}>
@@ -104,7 +141,6 @@ export default function Nav() {
               </p>
             </div>
 
-            {/* Edit name */}
             {!confirmDelete && (
               <div className={styles.dropSection}>
                 {editing ? (
@@ -135,14 +171,46 @@ export default function Nav() {
 
             <div className={styles.dropDivider} />
 
-            {/* Sign out */}
+            {/* Google Calendar */}
+            {!confirmDelete && (
+              <>
+                <div className={styles.dropSection}>
+                  <div className={styles.googleRow}>
+                    <div className={styles.googleInfo}>
+                      <span className={styles.googleLabel}>GOOGLE CALENDAR</span>
+                      <span className={`${styles.googleStatus} ${googleConnected ? styles.googleConnected : styles.googleDisconnected}`}>
+                        {googleConnected ? '● CONNECTED' : '○ NOT CONNECTED'}
+                      </span>
+                    </div>
+                    {googleConnected ? (
+                      <button
+                        className={styles.googleBtn}
+                        onClick={handleGoogleDisconnect}
+                        disabled={googleLoading}
+                      >
+                        {googleLoading ? '...' : 'DISCONNECT'}
+                      </button>
+                    ) : (
+                      <button
+                        className={`${styles.googleBtn} ${styles.googleBtnConnect}`}
+                        onClick={handleGoogleConnect}
+                        disabled={googleLoading}
+                      >
+                        CONNECT
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className={styles.dropDivider} />
+              </>
+            )}
+
             {!confirmDelete && (
               <button className={styles.dropAction} onClick={handleSignOut}>
                 SIGN OUT
               </button>
             )}
 
-            {/* Delete account */}
             {!confirmDelete ? (
               <button
                 className={`${styles.dropAction} ${styles.dropDanger}`}
