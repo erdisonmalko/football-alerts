@@ -38,5 +38,9 @@ celery_app.conf.update(
             "task": "app.tasks.alert_tasks.update_match_statuses_task",
             "schedule": crontab(minute="*/15"),
         },
+        "sync-calendars": {
+            "task": "app.tasks.alert_tasks.sync_calendar_task",
+            "schedule": crontab(hour=7, minute=30),  # 30 min after morning match sync
+        },
     },
 )

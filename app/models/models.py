@@ -8,6 +8,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    Text,
     UniqueConstraint,
     func,
 )
@@ -56,6 +57,9 @@ class User(Base):
 
     subscriptions: Mapped[list["Subscription"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
+    )
+    google_token: Mapped[Optional["GoogleToken"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan", uselist=False
     )
     alert_logs: Mapped[list["AlertLog"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
@@ -175,3 +179,27 @@ class AlertLog(Base):
 
     user: Mapped["User"] = relationship(back_populates="alert_logs")
     match: Mapped["Match"] = relationship(back_populates="alert_logs")
+
+
+class GoogleToken(Base):
+    """
+    Stores OAuth tokens for users who connect their Google Calendar.
+    One row per user — updated on each token refresh.
+    """
+
+    __tablename__ = "google_tokens"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False
+    )
+    access_token: Mapped[str] = mapped_column(Text, nullable=False)
+    refresh_token: Mapped[str] = mapped_column(Text, nullable=False)
+    token_expiry: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    user: Mapped["User"] = relationship(back_populates="google_token")

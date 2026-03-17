@@ -268,3 +268,77 @@
 
 .deleteConfirmBtn:hover:not(:disabled) { opacity: 0.85; }
 .deleteConfirmBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+
+
+.googleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+}
+
+.googleInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.googleLabel {
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--text-3);
+}
+
+.googleStatus {
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.googleConnected {
+  color: #22c55e;
+}
+
+.googleDisconnected {
+  color: var(--text-4);
+}
+
+.googleBtn {
+  background: transparent;
+  color: var(--text-3);
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 0.3rem 0.65rem;
+  border: 1px solid var(--border-2);
+  transition: all 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.googleBtn:hover:not(:disabled) {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.googleBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.googleBtnConnect {
+  color: #22c55e;
+  border-color: #22c55e40;
+}
+
+.googleBtnConnect:hover:not(:disabled) {
+  border-color: #22c55e;
+  color: #22c55e;
+  background: #22c55e10;
+}
