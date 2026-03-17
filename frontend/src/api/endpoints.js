@@ -57,3 +57,16 @@ export const getTeamsByLeague = (code) =>
 // User matches (dashboard — live, upcoming, finished)
 export const getMyMatches = () =>
   api.get('/users/me/matches').then(r => r.data)
+
+// Google Calendar
+
+export const getGoogleStatus = () =>
+  api.get('/auth/google/status').then(r => r.data)
+
+export const connectGoogle = () => {
+  // Redirect browser to backend OAuth flow
+  window.location.href = `${import.meta.env.VITE_API_URL}/api/v1/auth/google/connect`
+}
+
+export const disconnectGoogle = () =>
+  api.delete('/auth/google/disconnect')

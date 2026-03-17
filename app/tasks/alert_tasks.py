@@ -159,3 +159,47 @@ async def _update_match_statuses():
         results = await update_live_and_recent_matches(db)
         await db.commit()
         logger.info("[_update_match_statuses] Updated: %s", results)
+
+
+@celery_app.task(
+    name="app.tasks.alert_tasks.sync_calendar_task",
+    bind=True,
+    base=AsyncTask,
+    max_retries=3,
+)
+def sync_calendar_task(self):
+    logger.info("[sync_calendar_task] START")
+    return self.run_async(_sync_calendars())
+
+
+async def _sync_calendars():
+    """
+    For every user with Google Calendar connected, adds their upcoming
+    subscribed matches as calendar events. Runs after each match sync.
+    """
+    logger.info("[_sync_calendars] started")
+    from app.db.celery_session import CelerySessionLocal
+    from app.models.models import GoogleToken
+    from app.services.match_service import get_matches_for_user
+    from app.services.google_calendar_service import sync_subscriptions_to_calendar
+    from app.services.user_service import get_user_by_id
+    from sqlalchemy import select
+
+    async with CelerySessionLocal() as db:
+        # Find all users with Google Calendar connected
+        result = await db.execute(select(GoogleToken))
+        tokens = result.scalars().all()
+        logger.info("[_sync_calendars] %s users with Google Calendar", len(tokens))
+
+        for token in tokens:
+            user = await get_user_by_id(db, token.user_id)
+            if not user or not user.is_active:
+                continue
+            match_data = await get_matches_for_user(db, token.user_id)
+            upcoming = match_data["upcoming"]
+            added = await sync_subscriptions_to_calendar(db, user, upcoming)
+            logger.info(
+                "[_sync_calendars] user %s: added %s calendar events", user.email, added
+            )
+        await db.commit()
+    logger.info("[_sync_calendars] complete")

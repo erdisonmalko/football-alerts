@@ -62,12 +62,12 @@ services:
 
   frontend:
     build:
-      context: ./football-alerts-frontend
+      context: ./frontend
       dockerfile: Dockerfile.local
     ports:
       - "5173:5173"
     volumes:
-      - ./football-alerts-frontend:/app
+      - ./frontend:/app
       - /app/node_modules # This prevents host node_modules from overwriting container's node_modules
     depends_on:
       - api

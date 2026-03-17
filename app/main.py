@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import OperationalError
 
-from app.api.routes import admin, auth, football, users
+from app.api.routes import admin, auth, football, users, google
 from app.core.config import settings
 from app.db.session import engine
 from app.models.models import Base  # noqa: F401 — ensures models are registered
@@ -83,6 +83,7 @@ app.include_router(auth.router, prefix=API_PREFIX)
 app.include_router(users.router, prefix=API_PREFIX)
 app.include_router(football.router, prefix=API_PREFIX)
 app.include_router(admin.router, prefix=API_PREFIX)
+app.include_router(google.router, prefix=API_PREFIX)
 
 
 @app.get("/health", tags=["health"])
