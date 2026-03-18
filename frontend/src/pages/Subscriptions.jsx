@@ -1,12 +1,14 @@
 import { useEffect, useState, useMemo } from 'react'
 import {
   getSubscriptions, addSubscription, removeSubscription,
-  getLeagues, getTeamsByLeague, getUpcomingMatches,
+  getLeagues, getTeamsByLeague, getUpcomingMatches,getGoogleStatus,connectGoogle
 } from '../api/endpoints'
 import Nav from '../components/Nav'
 import Pagination from '../components/Pagination'
 import FilterChips from '../components/FilterChips'
+import CalendarConnectModal from '../components/CalendarConnect'
 import styles from './Subscriptions.module.css'
+import api from '../api/client'
 
 const MATCH_PAGE_SIZE = 15
 
@@ -14,6 +16,29 @@ function formatKickoff(dateStr) {
   const d = new Date(dateStr)
   return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
     + ' ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+}
+//show banner for calendar sync with google calendar,
+//  with connect and dismiss buttons. Only show once per user 
+// (can use localStorage to track dismissal)
+function CalendarBanner({ onClose }) {
+  return (
+    <div className={styles.banner}>
+      <div className={styles.bannerInner}>
+        <span className={styles.bannerText}>
+          Sync with Google Calendar to automatically block time for upcoming matches.
+        </span>
+
+        <div className={styles.bannerActions}>
+          <button className={styles.bannerLink} onClick={connectGoogle}>
+            Connect
+          </button>
+          <button className={styles.bannerClose} onClick={onClose}>
+            ×
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function usePaged(items, pageSize = 12) {
@@ -54,7 +79,42 @@ export default function Subscriptions() {
   const [adding, setAdding] = useState(null)
   const [removing, setRemoving] = useState(null)
   const [error, setError] = useState('')
+  const [showCalendarBanner, setShowCalendarBanner] = useState(true)
+  const [showCalendarModal, setShowCalendarModal] = useState(false)
+  const [pendingMatchId, setPendingMatchId] = useState(null)
 
+  const addMatchToCalendar = async (matchId) => {
+    try {
+      await api.post(`/matches/calendar/add-match/${matchId}`)
+    } catch {
+      console.warn('Calendar sync failed')
+    }
+  }
+  useEffect(() => {
+    const resumeCalendarSync = async () => {
+      const storedMatchId = localStorage.getItem('pending_match_id')
+      if (!storedMatchId) return
+
+      const status = await getGoogleStatus()
+
+      if (status.connected) {
+        await addMatchToCalendar(storedMatchId)
+        localStorage.removeItem('pending_match_id')
+      }
+    }
+
+    resumeCalendarSync()
+  }, [])
+
+  useEffect(() => {
+    const dismissed = localStorage.getItem('calendar_banner_dismissed')
+    if (dismissed) setShowCalendarBanner(false)
+  }, [])
+
+  const handleCloseBanner = () => {
+    localStorage.setItem('calendar_banner_dismissed', 'true')
+    setShowCalendarBanner(false)
+  }
   // Filters
   const [upcomingLeagueFilter, setUpcomingLeagueFilter] = useState(new Set())
   const [activeTypeFilter, setActiveTypeFilter] = useState(new Set())
@@ -144,13 +204,25 @@ export default function Subscriptions() {
     const key = `${type}-${externalId}`
     setAdding(key)
     setError('')
+
     try {
       const sub = await addSubscription(type, String(externalId), displayName)
       setSubscriptions(s => [...s, sub])
       if (type === 'match') {
         setMatches(ms => ms.map(m =>
-          String(m.external_id) === String(externalId) ? { ...m, is_subscribed: true } : m
+          String(m.external_id) === String(externalId)
+            ? { ...m, is_subscribed: true }
+            : m
         ))
+        // Check Google status
+        const status = await getGoogleStatus()
+        if (!status.connected) {
+          setPendingMatchId(externalId)
+          setShowCalendarModal(true)
+          return
+        }
+        // If connected → sync immediately
+        await addMatchToCalendar(externalId)
       }
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to add subscription')
@@ -176,14 +248,13 @@ export default function Subscriptions() {
       setRemoving(null)
     }
   }
-
   const getSubId = (type, externalId) =>
     subscriptions.find(s => s.subscription_type === type && s.external_id === String(externalId))?.id
 
   const TABS = [
-    { key: 'upcoming', label: 'UPCOMING' },
-    { key: 'leagues', label: 'LEAGUES' },
-    { key: 'active', label: 'ACTIVE ALERTS', count: subscriptions.length },
+    { key: 'upcoming', label: 'UPCOMING MATCHES' },
+    { key: 'leagues', label: 'LEAGUES & TEAMS' },
+    { key: 'active', label: 'YOUR ACTIVE ALERTS', count: subscriptions.length },
   ]
 
   return (
@@ -198,6 +269,20 @@ export default function Subscriptions() {
           </div>
         </div>
 
+        {showCalendarBanner && (
+          <CalendarBanner onClose={handleCloseBanner} />
+        )}
+        <CalendarConnectModal
+          isOpen={showCalendarModal}
+          onClose={() => {
+            setShowCalendarModal(false)
+            setPendingMatchId(null)
+          }}
+          onConnect={() => {
+            connectGoogle()
+          }}
+        />
+                
         {error && <p className={styles.error}>{error}</p>}
 
         {loadingInit ? (

@@ -5,7 +5,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logger import get_logger
-from app.models.models import AlertLog, AlertType, Match, Subscription, SubscriptionType
+from app.models.models import AlertLog, AlertType, CalendarEvent, Match, Subscription, SubscriptionType
 from app.services.football_service import football_client, SUPPORTED_LEAGUES
 
 logger = get_logger(__name__)
@@ -218,6 +218,59 @@ async def get_matches_for_user(
 
     return {"live": live, "upcoming": upcoming, "finished": finished}
 
+async def get_match_by_id(db: AsyncSession, match_id: int) -> Optional[Match]:
+    result = await db.execute(select(Match).where(Match.external_id == match_id))
+    return result.scalar_one_or_none()
+
+# ── Calendar Events(add/remove) ─────────────────────────────
+async def get_calendar_event(
+    db: AsyncSession, user_id: int, match_id: int
+):
+    result = await db.execute(
+        select(CalendarEvent).where(
+            CalendarEvent.user_id == user_id,
+            CalendarEvent.match_id == match_id,
+        )
+    )
+    return result.scalar_one_or_none()
+
+async def create_calendar_event(
+    db: AsyncSession,
+    user_id: int,
+    match_id: int,
+    event_id: str,
+):
+    event = CalendarEvent(
+        user_id=user_id,
+        match_id=match_id,
+        google_event_id=event_id,
+    )
+    db.add(event)
+    logger.debug(
+        "Created calendar event mapping: user_id=%s, match_id=%s, event_id=%s",
+        user_id, 
+        match_id,
+        event_id,
+    )
+    return event
+
+
+async def delete_calendar_event(
+    db: AsyncSession, user_id: int, match_id: int
+):
+    result = await db.execute(
+        select(CalendarEvent).where(
+            CalendarEvent.user_id == user_id,
+            CalendarEvent.match_id == match_id,
+        )
+    )
+    event = result.scalar_one_or_none()
+
+    if not event:
+        return None
+
+    await db.delete(event)
+    return event
 
 # ── Cleanup ───────────────────────────────────────────────────────────────────
 
