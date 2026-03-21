@@ -17,19 +17,25 @@ LOGGING_CONFIG = {
         },
     },
     "root": {
-        "level": "DEBUG",
+        "level": "DEBUG",  # App logs default level
         "handlers": ["console"],
     },
     "loggers": {
-        "sqlalchemy.engine": {"level": "WARNING"},
+        "app": {
+            "level": "DEBUG",
+            "handlers": ["console"],
+            "propagate": False,
+        },
+        "sqlalchemy.engine": {"level": "WARNING", "propagate": False},
         "httpx": {"level": "WARNING"},
         "httpcore": {"level": "WARNING"},
         "uvicorn.access": {"level": "WARNING"},
     },
 }
 
-# Runs once when this module is first imported — before any logger is requested
-logging.config.dictConfig(LOGGING_CONFIG)
+
+def setup_logging():
+    logging.config.dictConfig(LOGGING_CONFIG)
 
 
 def get_logger(name: str) -> logging.Logger:

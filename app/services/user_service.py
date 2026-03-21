@@ -3,11 +3,13 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.logger import get_logger
 from app.core.security import hash_password
 from app.models.models import Subscription, User
 from app.schemas.schemas import SubscriptionCreate, UserRegister
 
+from app.core.logger import get_logger, setup_logging
+
+setup_logging()
 logger = get_logger(__name__)
 
 

@@ -7,7 +7,6 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.logger import get_logger
 from app.core.security import get_current_user
 from app.db.session import get_db
 from app.models.models import User
@@ -19,6 +18,9 @@ from app.services.google_calendar_service import (
     save_user_token,
 )
 
+from app.core.logger import get_logger, setup_logging
+
+setup_logging()
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/auth/google", tags=["google"])

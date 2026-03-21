@@ -7,11 +7,13 @@ from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.logger import get_logger
 from app.db.session import get_db
 from app.models.models import AlertType
 from app.services.match_service import get_matches_due_for_alerts, sync_all_leagues
 
+from app.core.logger import get_logger, setup_logging
+
+setup_logging()
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/admin", tags=["admin"])

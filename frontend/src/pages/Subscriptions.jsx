@@ -1,9 +1,12 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import {
   getSubscriptions, addSubscription, removeSubscription,
   getLeagues, getTeamsByLeague, getUpcomingMatches,
+  getGoogleStatus, connectGoogle,
+  addMatchToCalendar,removeMatchFromCalendar,
 } from '../api/endpoints'
 import Nav from '../components/Nav'
+import CalendarSyncModal from '../components/CalendarSyncModal'
 import Pagination from '../components/Pagination'
 import FilterChips from '../components/FilterChips'
 import styles from './Subscriptions.module.css'
@@ -54,6 +57,12 @@ export default function Subscriptions() {
   const [adding, setAdding] = useState(null)
   const [removing, setRemoving] = useState(null)
   const [error, setError] = useState('')
+  const [calendarSyncing, setCalendarSyncing] = useState(false)
+
+  // Calendar modal state
+  const [modalOpen, setModalOpen] = useState(false)
+  const [modalConnected, setModalConnected] = useState(false)
+  const [pendingMatchId, setPendingMatchId] = useState(null)
 
   // Filters
   const [upcomingLeagueFilter, setUpcomingLeagueFilter] = useState(new Set())
@@ -61,11 +70,10 @@ export default function Subscriptions() {
 
   const SUB_PAGE_SIZE = 10
   const [subPage, setSubPage] = useState(1)
-
   const leaguePager = usePaged(leagues, 12)
   const teamPager = usePaged(teams, 15)
 
-  const fetchMatches = async (page) => {
+  const fetchMatches = useCallback(async (page) => {
     setLoadingMatches(true)
     try {
       const params = new URLSearchParams({ page, page_size: MATCH_PAGE_SIZE })
@@ -77,32 +85,47 @@ export default function Subscriptions() {
     } finally {
       setLoadingMatches(false)
     }
-  }
-
-  useEffect(() => {
-    Promise.all([
-      getSubscriptions(),
-      getLeagues(),
-      fetchMatches(1),
-    ]).then(([subs, lgs]) => {
-      setSubscriptions(subs)
-      setLeagues(lgs)
-    }).finally(() => setLoadingInit(false))
   }, [])
 
-  // Dynamic league options from loaded matches
+  // On mount: load data + resume any pending calendar sync after OAuth redirect
+  useEffect(() => {
+    const init = async () => {
+      const [subs, lgs] = await Promise.all([
+        getSubscriptions(),
+        getLeagues(),
+        fetchMatches(1),
+      ])
+      setSubscriptions(subs)
+      setLeagues(lgs)
+
+      // Resume pending calendar sync after Google OAuth redirect
+      const storedMatchId = localStorage.getItem('pending_match_id')
+      if (storedMatchId) {
+        localStorage.removeItem('pending_match_id')
+        try {
+          const status = await getGoogleStatus()
+          if (status.connected) {
+            await addMatchToCalendar(storedMatchId)
+          }
+        } catch {
+          // Silent — calendar sync is optional
+        }
+      }
+    }
+
+    init().finally(() => setLoadingInit(false))
+  }, [fetchMatches])
+
   const upcomingLeagueOptions = useMemo(() => {
     const codes = [...new Set(matches.map(m => m.league_code))].sort()
     return codes.map(code => ({ value: code, label: code }))
   }, [matches])
 
-  // Filtered upcoming matches
   const filteredMatches = useMemo(() => {
     if (upcomingLeagueFilter.size === 0) return matches
     return matches.filter(m => upcomingLeagueFilter.has(m.league_code))
   }, [matches, upcomingLeagueFilter])
 
-  // Filtered active subscriptions
   const filteredSubs = useMemo(() => {
     if (activeTypeFilter.size === 0) return subscriptions
     return subscriptions.filter(s => activeTypeFilter.has(s.subscription_type))
@@ -147,10 +170,17 @@ export default function Subscriptions() {
     try {
       const sub = await addSubscription(type, String(externalId), displayName)
       setSubscriptions(s => [...s, sub])
+
       if (type === 'match') {
         setMatches(ms => ms.map(m =>
           String(m.external_id) === String(externalId) ? { ...m, is_subscribed: true } : m
         ))
+
+        // Check Google status and show modal
+        const status = await getGoogleStatus()
+        setPendingMatchId(externalId)
+        setModalConnected(status.connected)
+        setModalOpen(true)
       }
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to add subscription')
@@ -164,11 +194,19 @@ export default function Subscriptions() {
     try {
       await removeSubscription(subId)
       setSubscriptions(s => s.filter(x => x.id !== subId))
+
       if (sub?.subscription_type === 'match') {
         setMatches(ms => ms.map(m =>
           String(m.external_id) === sub.external_id ? { ...m, is_subscribed: false } : m
         ))
+        // Remove from Google Calendar silently — don't block on failure
+        try {
+          await removeMatchFromCalendar(sub.external_id)
+        } catch {
+          // Silent — calendar removal is best-effort
+        }
       }
+
       if (pagedSubs.length === 1 && subPage > 1) setSubPage(p => p - 1)
     } catch {
       setError('Failed to remove subscription')
@@ -177,13 +215,38 @@ export default function Subscriptions() {
     }
   }
 
+  const handleModalConnect = () => {
+    // Store pending match so we can resume after OAuth redirect
+    if (pendingMatchId) localStorage.setItem('pending_match_id', pendingMatchId)
+    connectGoogle()
+  }
+
+  const handleModalConfirm = async () => {
+    if (!pendingMatchId) return
+    setCalendarSyncing(true)
+    try {
+      await addMatchToCalendar(pendingMatchId)
+    } catch {
+      // Silent — calendar sync is optional
+    } finally {
+      setCalendarSyncing(false)
+      setModalOpen(false)
+      setPendingMatchId(null)
+    }
+  }
+
+  const handleModalClose = () => {
+    setModalOpen(false)
+    setPendingMatchId(null)
+  }
+
   const getSubId = (type, externalId) =>
     subscriptions.find(s => s.subscription_type === type && s.external_id === String(externalId))?.id
 
   const TABS = [
-    { key: 'upcoming', label: 'UPCOMING' },
-    { key: 'leagues', label: 'LEAGUES' },
-    { key: 'active', label: 'ACTIVE ALERTS', count: subscriptions.length },
+    { key: 'upcoming', label: 'UPCOMING MATCHES' },
+    { key: 'leagues', label: 'LEAGUES & TEAMS' },
+    { key: 'active', label: 'YOUR ACTIVE ALERTS', count: subscriptions.length },
   ]
 
   return (
@@ -199,6 +262,15 @@ export default function Subscriptions() {
         </div>
 
         {error && <p className={styles.error}>{error}</p>}
+
+        <CalendarSyncModal
+          isOpen={modalOpen}
+          isConnected={modalConnected}
+          syncing={calendarSyncing}
+          onClose={handleModalClose}
+          onConnect={handleModalConnect}
+          onConfirm={handleModalConfirm}
+        />
 
         {loadingInit ? (
           <LoadingBar />
@@ -230,9 +302,7 @@ export default function Subscriptions() {
                   selected={upcomingLeagueFilter}
                   onChange={(next) => { setUpcomingLeagueFilter(next); setMatchPage(1) }}
                 />
-                {loadingMatches ? (
-                  <LoadingBar />
-                ) : filteredMatches.length === 0 ? (
+                {loadingMatches ? <LoadingBar /> : filteredMatches.length === 0 ? (
                   <p className={styles.empty}>No matches found.</p>
                 ) : (
                   <>
@@ -336,9 +406,7 @@ export default function Subscriptions() {
                       </span>
                     </div>
                     <div className={styles.list}>
-                      {loadingTeams ? (
-                        <LoadingBar />
-                      ) : teamPager.paged.map(team => {
+                      {loadingTeams ? <LoadingBar /> : teamPager.paged.map(team => {
                         const subscribed = isSubscribed('team', team.id)
                         const key = `team-${team.id}`
                         return (

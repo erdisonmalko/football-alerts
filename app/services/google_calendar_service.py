@@ -15,10 +15,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.logger import get_logger
 from app.models.models import GoogleToken, Match, User
 
+from app.core.logger import get_logger, setup_logging
+
+setup_logging()
 logger = get_logger(__name__)
+
 
 # SCOPES = ["https://www.googleapis.com/auth/calendar"]
 # less privileged scope that only allows managing events, not full calendar access
@@ -191,16 +194,45 @@ def add_match_to_calendar(token: GoogleToken, match: Match) -> Optional[str]:
 
 
 def remove_match_from_calendar(token: GoogleToken, event_id: str) -> bool:
-    """Removes a calendar event by its Google event ID. Returns True on success."""
+    """
+    Deletes an event from Google Calendar.
+    Returns True if deleted or already gone, False on failure.
+    """
     try:
         creds = _build_credentials(token)
         creds = _refresh_if_needed(creds)
+
         service = build("calendar", "v3", credentials=creds, cache_discovery=False)
-        service.events().delete(calendarId=CALENDAR_ID, eventId=event_id).execute()
-        logger.info("Removed calendar event %s for user %s", event_id, token.user_id)
+
+        service.events().delete(
+            calendarId=CALENDAR_ID,
+            eventId=event_id,
+        ).execute()
+
+        logger.info(
+            "Deleted calendar event %s for user %s",
+            event_id,
+            token.user_id,
+        )
+
         return True
+
     except Exception as exc:
-        logger.error("Failed to remove calendar event %s: %s", event_id, exc)
+        # Important: handle "already deleted" case gracefully
+        if "Not Found" in str(exc):
+            logger.warning(
+                "Event %s already deleted for user %s",
+                event_id,
+                token.user_id,
+            )
+            return True
+
+        logger.error(
+            "Failed to delete event %s for user %s: %s",
+            event_id,
+            token.user_id,
+            exc,
+        )
         return False
 
 
@@ -212,17 +244,28 @@ async def sync_subscriptions_to_calendar(
     Skips matches already in the past.
     Returns the number of events added.
     """
+    from app.services.match_service import create_calendar_event
+
     token = await get_user_token(db, user.id)
     if not token:
         return 0
 
     now = datetime.now(timezone.utc)
     added = 0
+
     for match in matches:
         if match.kickoff_utc <= now:
             continue
+
         event_id = add_match_to_calendar(token, match)
+
         if event_id:
+            await create_calendar_event(
+                db,
+                user_id=user.id,
+                match_id=match.id,
+                event_id=event_id,
+            )
             added += 1
 
     # Update token if it was refreshed

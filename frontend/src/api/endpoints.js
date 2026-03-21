@@ -54,6 +54,13 @@ export const getLeagues = () =>
 export const getTeamsByLeague = (code) =>
   api.get(`/football/leagues/${code}/teams`).then(r => r.data)
 
+// Add match to user's calendar
+export const addMatchToCalendar = (matchId) =>
+  api.post(`/calendar/matches/add-match/${matchId}`)
+
+export const removeMatchFromCalendar = (matchId) =>
+  api.delete(`/calendar/matches/remove-match/${matchId}`)
+
 // User matches (dashboard — live, upcoming, finished)
 export const getMyMatches = () =>
   api.get('/users/me/matches').then(r => r.data)

@@ -269,3 +269,50 @@
   .tab { padding: 0.6rem 0.9rem; white-space: nowrap; }
   .title { font-size: 2rem; }
 }
+
+/* Calendar sync banner */
+.banner {
+  margin: 12px 0;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #0f172a, #111827);
+  border: 1px solid #1f2937;
+}
+
+.bannerInner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  gap: 12px;
+}
+
+.bannerText {
+  font-size: 13px;
+  color: #d1d5db;
+}
+
+.bannerActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bannerLink {
+  background: none;
+  border: none;
+  color: #22c55e; /* green accent */
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.bannerLink:hover {
+  text-decoration: underline;
+}
+
+.bannerClose {
+  background: none;
+  border: none;
+  color: #6b7280;
+  font-size: 16px;
+  cursor: pointer;
+}

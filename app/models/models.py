@@ -181,6 +181,7 @@ class AlertLog(Base):
     match: Mapped["Match"] = relationship(back_populates="alert_logs")
 
 
+# ── GoogleToken ─────────────────────────────────────────────────────────────
 class GoogleToken(Base):
     """
     Stores OAuth tokens for users who connect their Google Calendar.
@@ -203,3 +204,37 @@ class GoogleToken(Base):
     )
 
     user: Mapped["User"] = relationship(back_populates="google_token")
+
+
+# ── CalendarEvent ─────────────────────────────────────────────────────────────
+
+
+class CalendarEvent(Base):
+    __tablename__ = "calendar_events"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    match_id: Mapped[int] = mapped_column(
+        ForeignKey("matches.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    google_event_id: Mapped[str] = mapped_column(nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+    # Prevent duplicates (critical)
+    __table_args__ = (
+        UniqueConstraint("user_id", "match_id", name="uq_user_match_calendar"),
+    )
+
+    # Relationships (optional but clean)
+    match = relationship("Match")
+    user = relationship("User")

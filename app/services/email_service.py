@@ -2,11 +2,13 @@ from datetime import datetime
 import resend
 from app.core.config import settings
 from app.models.models import AlertType, Match, User
-from app.core.logger import get_logger
+from app.core.logger import get_logger, setup_logging
+
+setup_logging()
+logger = get_logger(__name__)
+
 
 resend.api_key = settings.RESEND_API_KEY
-
-logger = get_logger(__name__)
 
 
 # Alert type → human-readable label

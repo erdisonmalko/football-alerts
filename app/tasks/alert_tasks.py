@@ -173,33 +173,50 @@ def sync_calendar_task(self):
 
 
 async def _sync_calendars():
-    """
-    For every user with Google Calendar connected, adds their upcoming
-    subscribed matches as calendar events. Runs after each match sync.
-    """
     logger.info("[_sync_calendars] started")
+
     from app.db.celery_session import CelerySessionLocal
-    from app.models.models import GoogleToken
+    from app.models.models import GoogleToken, CalendarEvent
     from app.services.match_service import get_matches_for_user
     from app.services.google_calendar_service import sync_subscriptions_to_calendar
     from app.services.user_service import get_user_by_id
     from sqlalchemy import select
 
     async with CelerySessionLocal() as db:
-        # Find all users with Google Calendar connected
         result = await db.execute(select(GoogleToken))
         tokens = result.scalars().all()
+
         logger.info("[_sync_calendars] %s users with Google Calendar", len(tokens))
 
         for token in tokens:
             user = await get_user_by_id(db, token.user_id)
+
             if not user or not user.is_active:
                 continue
+
             match_data = await get_matches_for_user(db, token.user_id)
             upcoming = match_data["upcoming"]
-            added = await sync_subscriptions_to_calendar(db, user, upcoming)
-            logger.info(
-                "[_sync_calendars] user %s: added %s calendar events", user.email, added
+
+            # ✅ Fetch existing calendar mappings
+            result = await db.execute(
+                select(CalendarEvent.match_id).where(CalendarEvent.user_id == user.id)
             )
+            existing_match_ids = set(result.scalars().all())
+
+            # ✅ Filter only new matches
+            new_matches = [m for m in upcoming if m.id not in existing_match_ids]
+
+            if not new_matches:
+                continue
+
+            added = await sync_subscriptions_to_calendar(db, user, new_matches)
+
+            logger.info(
+                "[_sync_calendars] user %s: added %s calendar events",
+                user.email,
+                added,
+            )
+
         await db.commit()
+
     logger.info("[_sync_calendars] complete")
