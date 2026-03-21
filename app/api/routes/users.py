@@ -18,11 +18,17 @@ from app.services.user_service import (
     get_user_subscriptions,
 )
 
+from app.core.logger import get_logger, setup_logging
+
+setup_logging()
+logger = get_logger(__name__)
+
 router = APIRouter(prefix="/users", tags=["users"])
 
 
 @router.get("/me", response_model=UserOut)
 async def get_me(current_user: User = Depends(get_current_user)):
+    logger.info("[get_me] User %s accessed their profile", current_user.email)
     return current_user
 
 
@@ -36,6 +42,7 @@ async def update_me(
         current_user.full_name = data.full_name
     await db.commit()
     await db.refresh(current_user)
+    logger.info("[update_me] User %s updated their profile", current_user.email)
     return current_user
 
 
@@ -48,6 +55,7 @@ async def delete_me(
     """Permanently deletes the account and clears the auth cookie."""
     await db.delete(current_user)
     await db.commit()
+    logger.info("[delete_me] User %s deleted their account", current_user.email)
     response.delete_cookie(key=COOKIE_NAME, samesite="lax")
 
 
@@ -60,6 +68,7 @@ async def get_my_matches(
     db: AsyncSession = Depends(get_db),
 ):
     """Returns live, upcoming, and today's finished matches for the user's subscriptions."""
+    logger.info("[get_my_matches] User %s requested their matches", current_user.email)
     return await get_matches_for_user(db, current_user.id)
 
 
@@ -71,6 +80,10 @@ async def list_subscriptions(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """Lists the user's current league/team subscriptions."""
+    logger.info(
+        "[list_subscriptions] User %s requested their subscriptions", current_user.email
+    )
     return await get_user_subscriptions(db, current_user.id)
 
 
@@ -91,6 +104,10 @@ async def add_subscription(
         )
     await db.commit()
     await db.refresh(sub)
+    logger.info(
+        "[add_subscription] User %s added a new subscription", current_user.email
+    )
+
     return sub
 
 
@@ -107,3 +124,6 @@ async def remove_subscription(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
         )
+    logger.info(
+        "[remove_subscription] User %s removed a subscription", current_user.email
+    )

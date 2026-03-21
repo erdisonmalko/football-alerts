@@ -21,15 +21,22 @@ LOGGING_CONFIG = {
         "handlers": ["console"],
     },
     "loggers": {
-        "sqlalchemy.engine": {"level": "WARNING", "propagate": False},  # Silence noisy SQL logs
+        "app": {
+            "level": "DEBUG",
+            "handlers": ["console"],
+            "propagate": False,
+        },
+        "sqlalchemy.engine": {"level": "WARNING", "propagate": False},
         "httpx": {"level": "WARNING"},
         "httpcore": {"level": "WARNING"},
         "uvicorn.access": {"level": "WARNING"},
     },
 }
 
-# Apply logging config immediately
-logging.config.dictConfig(LOGGING_CONFIG)
+
+def setup_logging():
+    logging.config.dictConfig(LOGGING_CONFIG)
+
 
 def get_logger(name: str) -> logging.Logger:
     return logging.getLogger(name)

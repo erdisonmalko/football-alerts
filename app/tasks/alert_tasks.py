@@ -183,7 +183,6 @@ async def _sync_calendars():
     from sqlalchemy import select
 
     async with CelerySessionLocal() as db:
-
         result = await db.execute(select(GoogleToken))
         tokens = result.scalars().all()
 
@@ -200,16 +199,12 @@ async def _sync_calendars():
 
             # ✅ Fetch existing calendar mappings
             result = await db.execute(
-                select(CalendarEvent.match_id).where(
-                    CalendarEvent.user_id == user.id
-                )
+                select(CalendarEvent.match_id).where(CalendarEvent.user_id == user.id)
             )
             existing_match_ids = set(result.scalars().all())
 
             # ✅ Filter only new matches
-            new_matches = [
-                m for m in upcoming if m.id not in existing_match_ids
-            ]
+            new_matches = [m for m in upcoming if m.id not in existing_match_ids]
 
             if not new_matches:
                 continue

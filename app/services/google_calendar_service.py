@@ -15,10 +15,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.logger import get_logger
 from app.models.models import GoogleToken, Match, User
 
+from app.core.logger import get_logger, setup_logging
+
+setup_logging()
 logger = get_logger(__name__)
+
 
 # SCOPES = ["https://www.googleapis.com/auth/calendar"]
 # less privileged scope that only allows managing events, not full calendar access

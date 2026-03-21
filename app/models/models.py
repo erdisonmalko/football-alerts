@@ -180,6 +180,7 @@ class AlertLog(Base):
     user: Mapped["User"] = relationship(back_populates="alert_logs")
     match: Mapped["Match"] = relationship(back_populates="alert_logs")
 
+
 # ── GoogleToken ─────────────────────────────────────────────────────────────
 class GoogleToken(Base):
     """
@@ -204,7 +205,9 @@ class GoogleToken(Base):
 
     user: Mapped["User"] = relationship(back_populates="google_token")
 
+
 # ── CalendarEvent ─────────────────────────────────────────────────────────────
+
 
 class CalendarEvent(Base):
     __tablename__ = "calendar_events"
@@ -225,9 +228,7 @@ class CalendarEvent(Base):
 
     google_event_id: Mapped[str] = mapped_column(nullable=False)
 
-    created_at: Mapped[datetime] = mapped_column(
-        server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     # Prevent duplicates (critical)
     __table_args__ = (
