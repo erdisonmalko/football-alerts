@@ -8,13 +8,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import OperationalError
 
-from app.api.routes import admin, auth, football, users, google, google_calendar
-from app.core.config import settings
-from app.db.session import engine
-from app.models.models import Base  # noqa: F401 — ensures models are registered
+from app.v1.api.routes import admin, auth, football, users, google, google_calendar
+from app.v1.core.config import settings
+from app.v1.db.session import engine
+from app.v1.models.models import Base  # noqa: F401 — ensures models are registered
 
 
-from app.core.logger import get_logger, setup_logging
+from app.v1.core.logger import get_logger, setup_logging
 
 setup_logging()
 logger = get_logger(__name__)
