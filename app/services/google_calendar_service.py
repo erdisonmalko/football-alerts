@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.models.models import GoogleToken, Match, User
+from app.models.models import CalendarEvent, GoogleToken, Match, User
 
 from app.core.logger import get_logger, setup_logging
 
@@ -236,6 +236,43 @@ def remove_match_from_calendar(token: GoogleToken, event_id: str) -> bool:
         return False
 
 
+async def get_calendar_event(db: AsyncSession, user_id: int, match_id: int):
+    result = await db.execute(
+        select(CalendarEvent).where(
+            CalendarEvent.user_id == user_id,
+            CalendarEvent.match_id == match_id,
+        )
+    )
+    event = result.scalar_one_or_none()
+    logger.debug(
+        "[get_calendar_event] Queried calendar event: user_id=%s, match_id=%s, found=%s",
+        user_id,
+        match_id,
+        event is not None,
+    )
+    return event
+
+
+async def create_calendar_event(
+    db: AsyncSession, user_id: int, match_id: int, event_id: str
+) -> CalendarEvent:
+
+    event = CalendarEvent(
+        user_id=user_id,
+        match_id=match_id,
+        google_event_id=event_id,
+    )
+    db.add(event)
+    await db.flush()
+    logger.debug(
+        "[create_calendar_event] Created calendar event: user_id=%s, match_id=%s, event_id=%s",
+        user_id,
+        match_id,
+        event_id,
+    )
+    return event
+
+
 async def sync_subscriptions_to_calendar(
     db: AsyncSession, user: User, matches: list[Match]
 ) -> int:
@@ -244,7 +281,6 @@ async def sync_subscriptions_to_calendar(
     Skips matches already in the past.
     Returns the number of events added.
     """
-    from app.services.match_service import create_calendar_event
 
     token = await get_user_token(db, user.id)
     if not token:
