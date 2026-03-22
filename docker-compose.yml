@@ -27,7 +27,7 @@ services:
 
   api:
     build: .
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn app.v1.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
       - .:/app
     ports:
