@@ -5,11 +5,11 @@ from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from app.core.config import settings
-from app.db.session import Base
+from app.v1.core.config import settings
+from app.v1.db.session import Base
 
 # Import all models so Alembic can detect them
-import app.models.models  # noqa: F401
+import app.v1.models.models  # noqa: F401
 
 config = context.config
 

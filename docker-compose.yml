@@ -40,7 +40,7 @@ services:
         condition: service_healthy
   celery-worker:
     build: .
-    command: celery -A app.tasks.celery_app worker --loglevel=info --concurrency=4
+    command: celery -A app.v1.tasks.celery_app worker --loglevel=info --concurrency=4
     volumes:
       - .:/app
     env_file: .env
@@ -52,7 +52,7 @@ services:
 
   celery-beat:
     build: .
-    command: celery -A app.tasks.celery_app beat --loglevel=info
+    command: celery -A app.v1.tasks.celery_app beat --loglevel=info
     volumes:
       - .:/app
     env_file: .env
@@ -61,12 +61,12 @@ services:
 
   frontend:
     build:
-      context: ./frontend
+      context: ./frontend/v1/
       dockerfile: Dockerfile.dev
     ports:
       - "5173:5173"
     volumes:
-      - ./frontend:/app
+      - ./frontend/v1:/app
       - /app/node_modules # This prevents host node_modules from overwriting container's node_modules
     depends_on:
       - api
