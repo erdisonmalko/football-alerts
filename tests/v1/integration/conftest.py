@@ -5,7 +5,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.pool import NullPool
 
-from app.main import app
+from app.v1.main import app
 from app.v1.db.session import get_db
 from app.v1.models.models import Base
 from app.v1.core.config import settings

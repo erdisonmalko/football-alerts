@@ -1,7 +1,7 @@
 """
 Integration tests for auth endpoints.
 """
-from app.main import app
+from app.v1.main import app
 import pytest
 from httpx import AsyncClient
 
