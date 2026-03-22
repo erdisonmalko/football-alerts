@@ -32,7 +32,6 @@ SUPPORTED_LEAGUES: list[dict] = [
     {"code": "BL1", "name": "Bundesliga", "country": "Germany"},
     {"code": "FL1", "name": "Ligue 1", "country": "France"},
     {"code": "CL", "name": "Champions League", "country": "Europe"},
-    {"code": "EL", "name": "Europa League", "country": "Europe"},
     {"code": "PPL", "name": "Primeira Liga", "country": "Portugal"},
     {"code": "DED", "name": "Eredivisie", "country": "Netherlands"},
 ]

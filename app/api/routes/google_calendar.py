@@ -8,13 +8,12 @@ from app.services.google_calendar_service import (
     get_user_token,
     add_match_to_calendar,
     remove_match_from_calendar,
-)
-
-from app.services.match_service import (
-    get_match_by_id,
     create_calendar_event,
     get_calendar_event,
 )
+
+from app.services.match_service import get_match_by_id
+
 from app.core.logger import get_logger, setup_logging
 
 setup_logging()
