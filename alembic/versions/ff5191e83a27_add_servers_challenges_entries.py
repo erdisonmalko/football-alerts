@@ -19,10 +19,10 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.execute("CREATE TYPE serverrole AS ENUM ('owner', 'member')")
-    op.execute("CREATE TYPE challengestatus AS ENUM ('open', 'locked', 'settled', 'void')")
-    op.execute("CREATE TYPE challengeentrystatus AS ENUM ('pending', 'accepted', 'declined', 'void')")
-    op.execute("CREATE TYPE challengeentryresult AS ENUM ('win', 'loss', 'draw', 'void')")
+    op.execute("CREATE TYPE IF NOT EXISTS serverrole AS ENUM ('owner', 'member')")
+    op.execute("CREATE TYPE IF NOT EXISTS challengestatus AS ENUM ('open', 'locked', 'settled', 'void')")
+    op.execute("CREATE TYPE IF NOT EXISTS challengeentrystatus AS ENUM ('pending', 'accepted', 'declined', 'void')")
+    op.execute("CREATE TYPE IF NOT EXISTS challengeentryresult AS ENUM ('win', 'loss', 'draw', 'void')")
 
     op.create_table('servers',
         sa.Column('id', sa.Integer(), nullable=False),
