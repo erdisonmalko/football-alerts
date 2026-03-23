@@ -12,8 +12,12 @@ class Settings(BaseSettings):
     ADMIN_KEY: str = "update-me"
 
     # Separate local and prod URLs — never mixed up
-    LOCAL_DATABASE_URL: str = "postgresql+asyncpg://postgres:password@localhost:5432/football_alerts"
-    LOCAL_DATABASE_URL_SYNC: str = "postgresql://postgres:password@localhost:5432/football_alerts"
+    LOCAL_DATABASE_URL: str = (
+        "postgresql+asyncpg://postgres:password@localhost:5432/football_alerts"
+    )
+    LOCAL_DATABASE_URL_SYNC: str = (
+        "postgresql://postgres:password@localhost:5432/football_alerts"
+    )
     DATABASE_URL: str = ""
     DATABASE_URL_SYNC: str = ""
 
