@@ -19,11 +19,6 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.execute("CREATE TYPE IF NOT EXISTS serverrole AS ENUM ('owner', 'member')")
-    op.execute("CREATE TYPE IF NOT EXISTS challengestatus AS ENUM ('open', 'locked', 'settled', 'void')")
-    op.execute("CREATE TYPE IF NOT EXISTS challengeentrystatus AS ENUM ('pending', 'accepted', 'declined', 'void')")
-    op.execute("CREATE TYPE IF NOT EXISTS challengeentryresult AS ENUM ('win', 'loss', 'draw', 'void')")
-
     op.create_table('servers',
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('name', sa.String(length=100), nullable=False),
@@ -42,7 +37,7 @@ def upgrade() -> None:
         sa.Column('match_id', sa.Integer(), nullable=False),
         sa.Column('created_by_id', sa.Integer(), nullable=False),
         sa.Column('stake', sa.String(length=255), nullable=False),
-        sa.Column('status', sa.Enum('open', 'locked', 'settled', 'void', name='challengestatus', create_type=False), nullable=False),
+        sa.Column('status', sa.Enum('open', 'locked', 'settled', 'void', name='challengestatus'), nullable=False),
         sa.Column('expires_at', sa.DateTime(timezone=True), nullable=False),
         sa.Column('settled_at', sa.DateTime(timezone=True), nullable=True),
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
@@ -61,7 +56,7 @@ def upgrade() -> None:
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('server_id', sa.Integer(), nullable=False),
         sa.Column('user_id', sa.Integer(), nullable=False),
-        sa.Column('role', sa.Enum('owner', 'member', name='serverrole', create_type=False), nullable=False),
+        sa.Column('role', sa.Enum('owner', 'member', name='serverrole'), nullable=False),
         sa.Column('joined_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
         sa.Column('total_points', sa.Integer(), nullable=False),
         sa.Column('total_wins', sa.Integer(), nullable=False),
@@ -82,9 +77,9 @@ def upgrade() -> None:
         sa.Column('challenge_id', sa.Integer(), nullable=False),
         sa.Column('user_id', sa.Integer(), nullable=False),
         sa.Column('prediction', sa.String(length=100), nullable=True),
-        sa.Column('status', sa.Enum('pending', 'accepted', 'declined', 'void', name='challengeentrystatus', create_type=False), nullable=False),
+        sa.Column('status', sa.Enum('pending', 'accepted', 'declined', 'void', name='challengeentrystatus'), nullable=False),
         sa.Column('points_earned', sa.Integer(), nullable=False),
-        sa.Column('result', sa.Enum('win', 'loss', 'draw', 'void', name='challengeentryresult', create_type=False), nullable=True),
+        sa.Column('result', sa.Enum('win', 'loss', 'draw', 'void', name='challengeentryresult'), nullable=True),
         sa.Column('responded_at', sa.DateTime(timezone=True), nullable=True),
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
         sa.ForeignKeyConstraint(['challenge_id'], ['challenges.id'], ondelete='CASCADE'),
