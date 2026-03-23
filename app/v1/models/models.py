@@ -34,6 +34,35 @@ class SubscriptionType(str, enum.Enum):
     MATCH = "match"
 
 
+# ── Server Enums ──────────────────────────────────────────────────────────────
+
+
+class ServerRole(str, enum.Enum):
+    OWNER = "owner"
+    MEMBER = "member"
+
+
+class ChallengeStatus(str, enum.Enum):
+    OPEN = "open"  # waiting for responses, before kickoff
+    LOCKED = "locked"  # kickoff passed, no more entries accepted
+    SETTLED = "settled"  # match finished, results computed
+    VOID = "void"  # match cancelled or postponed
+
+
+class ChallengeEntryStatus(str, enum.Enum):
+    PENDING = "pending"  # invited, not yet responded
+    ACCEPTED = "accepted"  # placed their prediction
+    DECLINED = "declined"  # passed on this one
+    VOID = "void"  # voided with the parent challenge
+
+
+class ChallengeEntryResult(str, enum.Enum):
+    WIN = "win"
+    LOSS = "loss"
+    DRAW = "draw"  # tied on points with at least one other entry
+    VOID = "void"
+
+
 # ── User ──────────────────────────────────────────────────────────────────────
 
 
@@ -238,3 +267,179 @@ class CalendarEvent(Base):
     # Relationships (optional but clean)
     match = relationship("Match")
     user = relationship("User")
+
+
+# ── Server ────────────────────────────────────────────────────────────────────
+
+
+class Server(Base):
+    """
+    A named group where members challenge each other on match predictions.
+    Think Discord server — one user owns it, others join via invite.
+    """
+
+    __tablename__ = "servers"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    # Short random slug used for invite links, e.g. /join/abc123
+    invite_code: Mapped[str] = mapped_column(
+        String(16), unique=True, nullable=False, index=True
+    )
+    created_by_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    created_by: Mapped["User"] = relationship(foreign_keys=[created_by_id])
+    members: Mapped[list["ServerMember"]] = relationship(
+        back_populates="server", cascade="all, delete-orphan"
+    )
+    challenges: Mapped[list["Challenge"]] = relationship(
+        back_populates="server", cascade="all, delete-orphan"
+    )
+
+
+# ── ServerMember ──────────────────────────────────────────────────────────────
+
+
+class ServerMember(Base):
+    """
+    Membership record linking a user to a server.
+    Lifetime stats are denormalized here for fast leaderboard queries —
+    updated after each challenge settles rather than aggregated on the fly.
+    """
+
+    __tablename__ = "server_members"
+    __table_args__ = (
+        UniqueConstraint("server_id", "user_id", name="uq_server_member"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    server_id: Mapped[int] = mapped_column(
+        ForeignKey("servers.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    role: Mapped[ServerRole] = mapped_column(
+        Enum(ServerRole, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+        default=ServerRole.MEMBER,
+    )
+    joined_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    # Denormalized lifetime stats within this server
+    total_points: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    total_wins: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    total_losses: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    total_draws: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    challenge_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    server: Mapped["Server"] = relationship(back_populates="members")
+    user: Mapped["User"] = relationship()
+
+
+# ── Challenge ─────────────────────────────────────────────────────────────────
+
+
+class Challenge(Base):
+    """
+    A prediction challenge created by one server member, broadcast to
+    some or all other members. Each invited member gets a ChallengeEntry.
+    The creator's own prediction also lives in a ChallengeEntry.
+    """
+
+    __tablename__ = "challenges"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    server_id: Mapped[int] = mapped_column(
+        ForeignKey("servers.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    match_id: Mapped[int] = mapped_column(
+        ForeignKey("matches.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    created_by_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    stake: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[ChallengeStatus] = mapped_column(
+        Enum(ChallengeStatus, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+        default=ChallengeStatus.OPEN,
+    )
+    # Set to match kickoff — entries cannot be added or changed after this
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    settled_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    server: Mapped["Server"] = relationship(back_populates="challenges")
+    match: Mapped["Match"] = relationship()
+    created_by: Mapped["User"] = relationship(foreign_keys=[created_by_id])
+    entries: Mapped[list["ChallengeEntry"]] = relationship(
+        back_populates="challenge", cascade="all, delete-orphan"
+    )
+
+
+# ── ChallengeEntry ────────────────────────────────────────────────────────────
+
+
+class ChallengeEntry(Base):
+    """
+    One row per invited participant per challenge.
+    The challenge creator also gets an entry (auto-accepted with their prediction).
+    Points and result are populated at settlement.
+
+    Scoring:
+        exact score match  → 3 points
+        correct result only (win / draw / loss) → 1 point
+        wrong result → 0 points
+    """
+
+    __tablename__ = "challenge_entries"
+    __table_args__ = (
+        UniqueConstraint("challenge_id", "user_id", name="uq_challenge_entry"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    challenge_id: Mapped[int] = mapped_column(
+        ForeignKey("challenges.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    # Free-text prediction, e.g. "Real Madrid 2-1" — null if declined
+    prediction: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    status: Mapped[ChallengeEntryStatus] = mapped_column(
+        Enum(ChallengeEntryStatus, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+        default=ChallengeEntryStatus.PENDING,
+    )
+    # Populated at settlement
+    points_earned: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    result: Mapped[Optional[ChallengeEntryResult]] = mapped_column(
+        Enum(ChallengeEntryResult, values_callable=lambda x: [e.value for e in x]),
+        nullable=True,
+    )
+    responded_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    challenge: Mapped["Challenge"] = relationship(back_populates="entries")
+    user: Mapped["User"] = relationship()

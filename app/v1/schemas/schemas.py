@@ -3,7 +3,14 @@ from typing import Optional
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
-from app.v1.models.models import AlertType, SubscriptionType
+from app.v1.models.models import (
+    AlertType,
+    ChallengeEntryResult,
+    ChallengeEntryStatus,
+    ChallengeStatus,
+    ServerRole,
+    SubscriptionType,
+)
 
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
@@ -138,3 +145,143 @@ class AlertLogOut(BaseModel):
     sent_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+# ── Server ────────────────────────────────────────────────────────────────────
+
+
+class ServerCreate(BaseModel):
+    name: str = Field(min_length=2, max_length=100)
+
+
+class ServerUpdate(BaseModel):
+    name: str = Field(min_length=2, max_length=100)
+
+
+class ServerMemberOut(BaseModel):
+    user_id: int
+    email: str
+    full_name: Optional[str]
+    role: ServerRole
+    joined_at: datetime
+    total_points: int
+    total_wins: int
+    total_losses: int
+    total_draws: int
+    challenge_count: int
+
+    model_config = {"from_attributes": True}
+
+
+class ServerOut(BaseModel):
+    id: int
+    name: str
+    invite_code: str
+    created_by_id: int
+    created_at: datetime
+    # Populated when fetching a single server — omitted in list views
+    members: list[ServerMemberOut] = []
+
+    model_config = {"from_attributes": True}
+
+
+class ServerListOut(BaseModel):
+    """Lightweight version used when listing all servers a user belongs to."""
+
+    id: int
+    name: str
+    invite_code: str
+    member_count: int
+    your_points: int  # caller's total_points in this server
+    your_rank: int  # caller's rank by points in this server
+
+    model_config = {"from_attributes": True}
+
+
+# ── Challenge ─────────────────────────────────────────────────────────────────
+
+
+class ChallengeCreate(BaseModel):
+    match_id: int = Field(description="Internal match ID from our DB")
+    stake: str = Field(
+        min_length=1,
+        max_length=255,
+        examples=["50 pushups", "Buy me a beer"],
+    )
+    prediction: str = Field(
+        min_length=1,
+        max_length=100,
+        examples=["Real Madrid 2-1"],
+        description="Creator's own prediction — stored as their ChallengeEntry",
+    )
+    # If empty → all current server members are invited
+    invited_user_ids: list[int] = Field(
+        default=[],
+        description="Subset of server members to invite. Empty means everyone.",
+    )
+
+
+class ChallengeEntryOut(BaseModel):
+    id: int
+    user_id: int
+    full_name: Optional[str] = None
+    email: str = ""
+    prediction: Optional[str]
+    status: ChallengeEntryStatus
+    points_earned: int
+    result: Optional[ChallengeEntryResult]
+    responded_at: Optional[datetime]
+
+    model_config = {"from_attributes": True}
+
+
+class ChallengeOut(BaseModel):
+    id: int
+    server_id: int
+    match_id: int
+    created_by_id: int
+    stake: str
+    status: ChallengeStatus
+    expires_at: datetime
+    settled_at: Optional[datetime]
+    created_at: datetime
+    entries: list[ChallengeEntryOut] = []
+
+    model_config = {"from_attributes": True}
+
+
+class ChallengeWithMatch(ChallengeOut):
+    """Used in list views — embeds match details so the UI doesn't need a second call."""
+
+    match: MatchOut
+
+
+class ChallengeAccept(BaseModel):
+    prediction: str = Field(
+        min_length=1,
+        max_length=100,
+        examples=["Bayern München 1-0"],
+    )
+
+
+# ── Server leaderboard ────────────────────────────────────────────────────────
+
+
+class LeaderboardEntry(BaseModel):
+    rank: int
+    user_id: int
+    full_name: Optional[str]
+    email: str
+    total_points: int
+    total_wins: int
+    total_losses: int
+    total_draws: int
+    challenge_count: int
+
+    model_config = {"from_attributes": True}
+
+
+class ServerLeaderboard(BaseModel):
+    server_id: int
+    server_name: str
+    entries: list[LeaderboardEntry]
