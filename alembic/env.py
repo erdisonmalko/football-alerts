@@ -38,15 +38,11 @@ def do_run_migrations(connection):
 
 
 async def run_async_migrations() -> None:
-    if settings.is_production:
-        db_url = settings.DATABASE_URL
-    else:
-        db_url = settings.LOCAL_DATABASE_URL
-
-    engine = create_async_engine(db_url, poolclass=pool.NullPool)
+    engine = create_async_engine(settings.DATABASE_URL, poolclass=pool.NullPool)
     async with engine.connect() as connection:
         await connection.run_sync(do_run_migrations)
     await engine.dispose()
+
 
 def run_migrations_online() -> None:
     asyncio.run(run_async_migrations())
