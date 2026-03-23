@@ -18,8 +18,8 @@ class Settings(BaseSettings):
     LOCAL_DATABASE_URL_SYNC: str = (
         "postgresql://postgres:password@localhost:5432/football_alerts"
     )
-    DATABASE_URL: str = ""
-    DATABASE_URL_SYNC: str = ""
+    PROD_DATABASE_URL: str = ""
+    PROD_DATABASE_URL_SYNC: str = ""
 
     # Docker internal URL — used by the app containers (api, worker, beat)
     DATABASE_URL: str = "postgresql+asyncpg://postgres:password@db:5432/football_alerts"

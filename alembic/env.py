@@ -40,7 +40,7 @@ def do_run_migrations(connection):
 async def run_async_migrations() -> None:
     if settings.is_production:
         # Railway sets APP_ENV=production and PROD_DATABASE_URL
-        db_url = settings.DATABASE_URL
+        db_url = settings.PROD_DATABASE_URL
     else:
         # Local terminal — hits localhost:5432, never Supabase
         db_url = settings.LOCAL_DATABASE_URL
