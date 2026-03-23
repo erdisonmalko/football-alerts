@@ -2,8 +2,8 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: ${DATABASE_USER}
-      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
       POSTGRES_DB: football_alerts
     ports:
       - "5432:5432"
@@ -27,7 +27,7 @@ services:
 
   api:
     build: .
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn app.v1.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
       - .:/app
     ports:

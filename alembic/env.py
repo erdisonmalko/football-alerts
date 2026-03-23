@@ -38,11 +38,17 @@ def do_run_migrations(connection):
 
 
 async def run_async_migrations() -> None:
-    engine = create_async_engine(settings.DATABASE_URL, poolclass=pool.NullPool)
+    if settings.is_production:
+        # Railway sets APP_ENV=production and PROD_DATABASE_URL
+        db_url = settings.PROD_DATABASE_URL
+    else:
+        # Local terminal — hits localhost:5432, never Supabase
+        db_url = settings.LOCAL_DATABASE_URL
+
+    engine = create_async_engine(db_url, poolclass=pool.NullPool)
     async with engine.connect() as connection:
         await connection.run_sync(do_run_migrations)
     await engine.dispose()
-
 
 def run_migrations_online() -> None:
     asyncio.run(run_async_migrations())
