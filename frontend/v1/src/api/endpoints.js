@@ -77,3 +77,19 @@ export const connectGoogle = () => {
 
 export const disconnectGoogle = () =>
   api.delete('/auth/google/disconnect')
+
+// Servers
+export const getMyServers = () =>
+  api.get('/servers').then(r => r.data)
+
+export const createServer = () =>
+  api.post('/servers')
+
+export const getServer = (serverId) =>
+  api.get(`/servers/${serverId}`).then(r => r.data)
+
+export const getServerLeaderboard = (serverId) =>
+  api.get(`/servers/${serverId}/leaderboard`).then(r => r.data)
+
+export const getServerChallenges = (serverId) =>
+  api.get(`/servers/${serverId}/challenges`).then(r => r.data)
