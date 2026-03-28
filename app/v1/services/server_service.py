@@ -278,7 +278,7 @@ async def get_public_servers(
     """All public servers — includes membership and request status for the user."""
     result = await db.execute(
         select(Server)
-        .where(Server.is_public == True)
+        .where(Server.is_public.is_(True))
         .order_by(Server.created_at.desc())
     )
     servers = result.scalars().all()
