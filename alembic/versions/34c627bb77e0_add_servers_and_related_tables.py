@@ -1,18 +1,16 @@
-"""add server is_public and join requests
+"""add servers and related tables
 
-Revision ID: 7ccbd1e7e416
+Revision ID: 34c627bb77e0
 Revises: 3b31a4298e82
-Create Date: 2026-03-28 22:58:51.069069
+Create Date: 2026-03-28 23:31:52.683918
 
 """
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
-
-# revision identifiers, used by Alembic.
-revision: str = '7ccbd1e7e416'
+revision: str = '34c627bb77e0'
 down_revision: Union[str, None] = '3b31a4298e82'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
