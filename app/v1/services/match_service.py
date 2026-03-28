@@ -36,6 +36,7 @@ async def sync_league_matches(db: AsyncSession, league_code: str) -> int:
             match.status = m["status"]
             match.home_score = m.get("home_score")
             match.away_score = m.get("away_score")
+            match.synced_at = datetime.now(timezone.utc)
         else:
             match = Match(
                 external_id=m["external_id"],
