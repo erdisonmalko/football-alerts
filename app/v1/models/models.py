@@ -270,25 +270,18 @@ class CalendarEvent(Base):
 
 
 # ── Server ────────────────────────────────────────────────────────────────────
-
-
 class Server(Base):
-    """
-    A named group where members challenge each other on match predictions.
-    Think Discord server — one user owns it, others join via invite.
-    """
-
     __tablename__ = "servers"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    # Short random slug used for invite links, e.g. /join/abc123
     invite_code: Mapped[str] = mapped_column(
         String(16), unique=True, nullable=False, index=True
     )
     created_by_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
+    is_public: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -300,6 +293,50 @@ class Server(Base):
     challenges: Mapped[list["Challenge"]] = relationship(
         back_populates="server", cascade="all, delete-orphan"
     )
+
+
+# ServerJoinRequest
+
+
+class JoinRequestStatus(str, enum.Enum):
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    DECLINED = "declined"
+
+
+class ServerJoinRequest(Base):
+    """
+    A request to join a private server.
+    Created when a user clicks 'Request to Join' on a private server.
+    Owner accepts or declines.
+    """
+
+    __tablename__ = "server_join_requests"
+    __table_args__ = (
+        UniqueConstraint("server_id", "user_id", name="uq_server_join_request"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    server_id: Mapped[int] = mapped_column(
+        ForeignKey("servers.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    status: Mapped[JoinRequestStatus] = mapped_column(
+        Enum(JoinRequestStatus, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+        default=JoinRequestStatus.PENDING,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    server: Mapped["Server"] = relationship()
+    user: Mapped["User"] = relationship()
 
 
 # ── ServerMember ──────────────────────────────────────────────────────────────

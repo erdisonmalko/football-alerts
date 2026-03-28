@@ -2,109 +2,16 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import Nav from '../components/Nav'
-import Pagination from '../components/Pagination'
 import FilterChips from '../components/FilterChips'
+import TabContent from '../components/TabContent'
+import ServersList from '../components/ServersList'
+import ServerDetail from '../components/ServerDetail'
 import styles from './Dashboard.module.css'
-import { getMyMatches } from '../api/endpoints'
+import { getMyMatches, getMyServers, getServer, getServerLeaderboard, getServerChallenges } from '../api/endpoints'
 
 const REFRESH_INTERVAL = 15 * 60 * 1000
 const PAGE_SIZES = { live: 5, upcoming: 20, finished: 10 }
 
-function formatKickoff(dateStr) {
-  const d = new Date(dateStr)
-  return {
-    date: d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }),
-    time: d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + ' UTC',
-  }
-}
-
-function timeUntil(dateStr) {
-  const diff = new Date(dateStr) - new Date()
-  if (diff <= 0) return null
-  const days = Math.floor(diff / 86400000)
-  const hours = Math.floor((diff % 86400000) / 3600000)
-  const mins = Math.floor((diff % 3600000) / 60000)
-  if (days >= 7) return `${days}d`
-  if (days > 0) return `${days}d ${hours}h`
-  if (hours > 0) return `${hours}h`
-  return `${mins}m`
-}
-
-function MatchRow({ match, section }) {
-  const { date, time } = formatKickoff(match.kickoff_utc)
-  const isLive = section === 'live'
-  const isFinished = section === 'finished'
-
-  return (
-    <div className={`${styles.matchRow} ${isLive ? styles.matchRowLive : ''} ${isFinished ? styles.matchRowFinished : ''}`}>
-      <div className={styles.matchLeague}>
-        <span className={styles.leagueCode}>{match.league_code}</span>
-        {match.matchday && <span className={styles.matchday}>MD{match.matchday}</span>}
-      </div>
-      <div className={styles.matchTeams}>
-        <span className={styles.teamName}>{match.home_team_name}</span>
-        {(isLive || isFinished) && match.home_score !== null ? (
-          <span className={styles.score}>{match.home_score} — {match.away_score}</span>
-        ) : (
-          <span className={styles.vs}>VS</span>
-        )}
-        <span className={styles.teamName}>{match.away_team_name}</span>
-      </div>
-      <div className={styles.matchMeta}>
-        {isLive ? (
-          <span className={styles.liveBadge}>● LIVE</span>
-        ) : isFinished ? (
-          <span className={styles.finishedBadge}>FINISHED</span>
-        ) : (
-          <>
-            <span className={styles.kickoffDate}>{date}</span>
-            <span className={styles.kickoffTime}>{time}</span>
-          </>
-        )}
-        {!isLive && !isFinished && timeUntil(match.kickoff_utc) && (
-          <span className={styles.countdown}>{timeUntil(match.kickoff_utc)}</span>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function TabContent({ matches, section, pageSize, leagueFilter }) {
-  const [page, setPage] = useState(1)
-
-  const filtered = useMemo(() => {
-    if (leagueFilter.size === 0) return matches
-    return matches.filter(m => leagueFilter.has(m.league_code))
-  }, [matches, leagueFilter])
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
-  const paged = filtered.slice((page - 1) * pageSize, page * pageSize)
-
-  // Reset to page 1 when filter changes
-  useEffect(() => { setPage(1) }, [leagueFilter])
-
-  if (filtered.length === 0) {
-    return (
-      <div className={styles.empty}>
-        <p className={styles.emptyTitle}>NO MATCHES</p>
-        <p className={styles.emptySub}>
-          {section === 'live' && 'No matches in play right now.'}
-          {section === 'upcoming' && 'No upcoming matches for your subscriptions.'}
-          {section === 'finished' && "No results yet today."}
-        </p>
-      </div>
-    )
-  }
-
-  return (
-    <>
-      <div className={styles.matchList}>
-        {paged.map(m => <MatchRow key={m.external_id} match={m} section={section} />)}
-      </div>
-      <Pagination page={page} totalPages={totalPages} onChange={setPage} />
-    </>
-  )
-}
 
 export default function Dashboard() {
   const { user } = useAuth()
@@ -113,6 +20,14 @@ export default function Dashboard() {
   const [lastUpdated, setLastUpdated] = useState(null)
   const [tab, setTab] = useState('live')
   const [leagueFilter, setLeagueFilter] = useState(new Set())
+  
+  // Server state
+  const [servers, setServers] = useState([])
+  const [selectedServer, setSelectedServer] = useState(null)
+  const [serverDetails, setServerDetails] = useState(null)
+  const [leaderboard, setLeaderboard] = useState(null)
+  const [challenges, setChallenges] = useState([])
+  const [serversLoading, setServersLoading] = useState(false)
 
   const fetchMatches = useCallback(async () => {
     try {
@@ -126,11 +41,46 @@ export default function Dashboard() {
     }
   }, [])
 
+  const fetchServers = useCallback(async () => {
+    setServersLoading(true)
+    try {
+      const data = await getMyServers()
+      setServers(data)
+    } catch (err) {
+      console.error('Failed to fetch servers:', err)
+    } finally {
+      setServersLoading(false)
+    }
+  }, [])
+
+  const fetchServerDetails = useCallback(async (serverId) => {
+    try {
+      const [details, leader, chal] = await Promise.all([
+        getServer(serverId),
+        getServerLeaderboard(serverId),
+        getServerChallenges(serverId),
+      ])
+      setServerDetails(details)
+      setLeaderboard(leader)
+      setChallenges(chal || [])
+      setSelectedServer(serverId)
+    } catch (err) {
+      console.error('Failed to fetch server details:', err)
+    }
+  }, [])
+
   useEffect(() => {
     fetchMatches()
     const interval = setInterval(fetchMatches, REFRESH_INTERVAL)
     return () => clearInterval(interval)
   }, [fetchMatches])
+
+  // Fetch servers when tab changes to servers
+  useEffect(() => {
+    if (tab === 'servers') {
+      fetchServers()
+    }
+  }, [tab, fetchServers])
 
   // Build dynamic league options from all matches combined
   const leagueOptions = useMemo(() => {
@@ -146,6 +96,7 @@ export default function Dashboard() {
     { key: 'live', label: 'LIVE', count: matches.live.length, live: true },
     { key: 'upcoming', label: 'UPCOMING', count: matches.upcoming.length },
     { key: 'finished', label: "TODAY'S RESULTS", count: matches.finished.length },
+    { key: 'servers', label: 'SERVERS', count: servers.length },
   ]
 
   return (
@@ -169,7 +120,7 @@ export default function Dashboard() {
 
         {loading ? (
           <div className={styles.loading}><div className={styles.loadingBar} /></div>
-        ) : !hasAny ? (
+        ) : !hasAny && tab !== 'servers' ? (
           <div className={styles.empty}>
             <p className={styles.emptyTitle}>NO MATCHES YET</p>
             <p className={styles.emptySub}>Subscribe to leagues or teams to see your matches here.</p>
@@ -195,19 +146,38 @@ export default function Dashboard() {
               ))}
             </div>
 
-            <FilterChips
-              label="FILTER BY LEAGUE"
-              options={leagueOptions}
-              selected={leagueFilter}
-              onChange={setLeagueFilter}
-            />
+            {tab === 'servers' ? (
+              selectedServer && serverDetails ? (
+                <ServerDetail
+                  serverDetails={serverDetails}
+                  leaderboard={leaderboard}
+                  challenges={challenges}
+                  onBack={() => setSelectedServer(null)}
+                />
+              ) : (
+                <ServersList
+                  servers={servers}
+                  loading={serversLoading}
+                  onSelectServer={fetchServerDetails}
+                />
+              )
+            ) : (
+              <>
+                <FilterChips
+                  label="FILTER BY LEAGUE"
+                  options={leagueOptions}
+                  selected={leagueFilter}
+                  onChange={setLeagueFilter}
+                />
 
-            <TabContent
-              matches={matches[tab]}
-              section={tab}
-              pageSize={PAGE_SIZES[tab]}
-              leagueFilter={leagueFilter}
-            />
+                <TabContent
+                  matches={matches[tab]}
+                  section={tab}
+                  pageSize={PAGE_SIZES[tab]}
+                  leagueFilter={leagueFilter}
+                />
+              </>
+            )}
           </>
         )}
       </main>

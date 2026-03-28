@@ -3,6 +3,7 @@ from typing import Optional
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
+from app.v1.services.challenge_service import validate_prediction
 from app.v1.models.models import (
     AlertType,
     ChallengeEntryResult,
@@ -10,6 +11,7 @@ from app.v1.models.models import (
     ChallengeStatus,
     ServerRole,
     SubscriptionType,
+    JoinRequestStatus,
 )
 
 
@@ -152,10 +154,12 @@ class AlertLogOut(BaseModel):
 
 class ServerCreate(BaseModel):
     name: str = Field(min_length=2, max_length=100)
+    is_public: bool = True
 
 
 class ServerUpdate(BaseModel):
     name: str = Field(min_length=2, max_length=100)
+    is_public: bool = True
 
 
 class ServerMemberOut(BaseModel):
@@ -169,6 +173,16 @@ class ServerMemberOut(BaseModel):
     total_losses: int
     total_draws: int
     challenge_count: int
+
+    model_config = {"from_attributes": True}
+
+
+class JoinRequestOut(BaseModel):
+    id: int
+    server_id: int
+    user_id: int
+    status: JoinRequestStatus
+    created_at: datetime
 
     model_config = {"from_attributes": True}
 
@@ -220,6 +234,13 @@ class ChallengeCreate(BaseModel):
         description="Subset of server members to invite. Empty means everyone.",
     )
 
+    @field_validator("prediction")
+    @classmethod
+    def prediction_must_be_valid_score(cls, v: str) -> str:
+        if not validate_prediction(v):
+            raise ValueError("Prediction must be a valid score format e.g. '2-1'")
+        return v.strip()
+
 
 class ChallengeEntryOut(BaseModel):
     id: int
@@ -257,11 +278,14 @@ class ChallengeWithMatch(ChallengeOut):
 
 
 class ChallengeAccept(BaseModel):
-    prediction: str = Field(
-        min_length=1,
-        max_length=100,
-        examples=["Bayern München 1-0"],
-    )
+    prediction: str = Field(min_length=1, max_length=20)
+
+    @field_validator("prediction")
+    @classmethod
+    def prediction_must_be_valid_score(cls, v: str) -> str:
+        if not validate_prediction(v):
+            raise ValueError("Prediction must be a valid score format e.g. '2-1'")
+        return v.strip()
 
 
 # ── Server leaderboard ────────────────────────────────────────────────────────

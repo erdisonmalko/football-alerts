@@ -11,9 +11,9 @@ from app.v1.core.logger import get_logger
 logger = get_logger(__name__)
 
 
-# ───────────────────────────────────────────────────────────
-# Celery tasks
-# ───────────────────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════
+# MATCH SYNCING
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 @celery_app.task(
@@ -29,56 +29,6 @@ def sync_matches_task(self):
     except Exception as exc:
         logger.exception("[sync_matches_task] FAILED: %s", exc)
         raise self.retry(exc=exc, countdown=300)  # retry after 5 min
-
-
-@celery_app.task(
-    name="app.v1.tasks.alert_tasks.dispatch_alerts_task",
-    bind=True,
-    base=AsyncTask,
-    max_retries=3,
-)
-def dispatch_alerts_task(self):
-    logger.info("[dispatch_alerts_task] START")
-    try:
-        return self.run_async(_dispatch_alerts())
-    except Exception as exc:
-        logger.exception("[dispatch_alerts_task] FAILED: %s", exc)
-        raise self.retry(exc=exc, countdown=120)  # retry after 2 min
-
-
-@celery_app.task(
-    name="app.v1.tasks.alert_tasks.update_match_statuses_task",
-    bind=True,
-    base=AsyncTask,
-    max_retries=3,
-)
-def update_match_statuses_task(self):
-    logger.info("[update_match_statuses_task] START")
-    try:
-        return self.run_async(_update_match_statuses())
-    except Exception as exc:
-        logger.exception("[update_match_statuses_task] FAILED: %s", exc)
-        raise self.retry(exc=exc, countdown=60)  # retry after 1 min
-
-
-@celery_app.task(
-    name="app.v1.tasks.alert_tasks.sync_calendar_task",
-    bind=True,
-    base=AsyncTask,
-    max_retries=3,
-)
-def sync_calendar_task(self):
-    logger.info("[sync_calendar_task] START")
-    try:
-        return self.run_async(_sync_calendars())
-    except Exception as exc:
-        logger.exception("[sync_calendar_task] FAILED: %s", exc)
-        raise self.retry(exc=exc, countdown=120)  # retry after 2 min
-
-
-# ───────────────────────────────────────────────────────────
-# Async implementations
-# ───────────────────────────────────────────────────────────
 
 
 async def _sync_matches():
@@ -107,6 +57,58 @@ async def _sync_matches():
             )
 
     logger.debug("[_sync_matches] DB session closed")
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# MATCH STATUS UPDATES(LIVE MATHCES ONLY)
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+@celery_app.task(
+    name="app.v1.tasks.alert_tasks.update_match_statuses_task",
+    bind=True,
+    base=AsyncTask,
+    max_retries=3,
+)
+def update_match_statuses_task(self):
+    logger.info("[update_match_statuses_task] START")
+    try:
+        return self.run_async(_update_match_statuses())
+    except Exception as exc:
+        logger.exception("[update_match_statuses_task] FAILED: %s", exc)
+        raise self.retry(exc=exc, countdown=60)  # retry after 1 min
+
+
+async def _update_match_statuses():
+    logger.debug("[_update_match_statuses] Opening DB session")
+
+    from app.v1.db.celery_session import CelerySessionLocal
+    from app.v1.services.match_service import update_live_and_recent_matches
+
+    async with CelerySessionLocal() as db:
+        results = await update_live_and_recent_matches(db)
+        await db.commit()
+        logger.info("[_update_match_statuses] Updated: %s", results)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# ALERT DISPATCH
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+@celery_app.task(
+    name="app.v1.tasks.alert_tasks.dispatch_alerts_task",
+    bind=True,
+    base=AsyncTask,
+    max_retries=3,
+)
+def dispatch_alerts_task(self):
+    logger.info("[dispatch_alerts_task] START")
+    try:
+        return self.run_async(_dispatch_alerts())
+    except Exception as exc:
+        logger.exception("[dispatch_alerts_task] FAILED: %s", exc)
+        raise self.retry(exc=exc, countdown=120)  # retry after 2 min
 
 
 async def _dispatch_alerts():
@@ -165,16 +167,24 @@ async def _dispatch_alerts():
     logger.info("[_dispatch_alerts] dispatch complete")
 
 
-async def _update_match_statuses():
-    logger.debug("[_update_match_statuses] Opening DB session")
+# ═══════════════════════════════════════════════════════════════════════════
+# CALENDAR SYNC
+# ═══════════════════════════════════════════════════════════════════════════
 
-    from app.v1.db.celery_session import CelerySessionLocal
-    from app.v1.services.match_service import update_live_and_recent_matches
 
-    async with CelerySessionLocal() as db:
-        results = await update_live_and_recent_matches(db)
-        await db.commit()
-        logger.info("[_update_match_statuses] Updated: %s", results)
+@celery_app.task(
+    name="app.v1.tasks.alert_tasks.sync_calendar_task",
+    bind=True,
+    base=AsyncTask,
+    max_retries=3,
+)
+def sync_calendar_task(self):
+    logger.info("[sync_calendar_task] START")
+    try:
+        return self.run_async(_sync_calendars())
+    except Exception as exc:
+        logger.exception("[sync_calendar_task] FAILED: %s", exc)
+        raise self.retry(exc=exc, countdown=120)  # retry after 2 min
 
 
 async def _sync_calendars():
@@ -217,3 +227,86 @@ async def _sync_calendars():
         await db.commit()
 
     logger.info("[_sync_calendars] complete")
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# CHALLENGE SETTLEMENT
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+@celery_app.task(
+    name="app.v1.tasks.alert_tasks.settle_challenges_task",
+    bind=True,
+    base=AsyncTask,
+    max_retries=3,
+)
+def settle_challenges_task(self):
+    logger.info("[settle_challenges_task] START")
+    try:
+        return self.run_async(_settle_challenges())
+    except Exception as exc:
+        logger.exception("[settle_challenges_task] FAILED: %s", exc)
+        raise self.retry(exc=exc, countdown=60)
+
+
+async def _settle_challenges():
+    from app.v1.db.celery_session import CelerySessionLocal
+    from app.v1.services.challenge_service import (
+        find_challenges_to_settle,
+        lock_expired_challenges,
+        settle_challenge,
+    )
+
+    async with CelerySessionLocal() as db:
+        locked = await lock_expired_challenges(db)
+        if locked:
+            logger.info("[_settle_challenges] locked %s expired challenges", locked)
+
+        challenges = await find_challenges_to_settle(db)
+        logger.info(
+            "[_settle_challenges] %s challenges ready to settle", len(challenges)
+        )
+
+        for challenge in challenges:
+            await settle_challenge(db, challenge)
+
+        await db.commit()
+
+    logger.info("[_settle_challenges] complete")
+
+
+@celery_app.task(
+    name="app.v1.tasks.alert_tasks.void_postponed_challenges_task",
+    bind=True,
+    base=AsyncTask,
+    max_retries=3,
+)
+def void_postponed_challenges_task(self):
+    logger.info("[void_postponed_challenges_task] START")
+    try:
+        return self.run_async(_void_postponed_challenges())
+    except Exception as exc:
+        logger.exception("[void_postponed_challenges_task] FAILED: %s", exc)
+        raise self.retry(exc=exc, countdown=120)
+
+
+async def _void_postponed_challenges():
+    from app.v1.db.celery_session import CelerySessionLocal
+    from app.v1.services.challenge_service import (
+        find_challenges_to_void,
+        void_challenge,
+    )
+
+    async with CelerySessionLocal() as db:
+        challenges = await find_challenges_to_void(db)
+        logger.info(
+            "[_void_postponed_challenges] %s challenges to void", len(challenges)
+        )
+
+        for challenge in challenges:
+            await void_challenge(db, challenge)
+            # TODO: notify creator via email that match was postponed/cancelled
+
+        await db.commit()
+
+    logger.info("[_void_postponed_challenges] complete")

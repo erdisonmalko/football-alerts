@@ -42,5 +42,13 @@ celery_app.conf.update(
             "task": "app.v1.tasks.alert_tasks.sync_calendar_task",
             "schedule": crontab(hour=7, minute=30),  # 30 min after morning match sync
         },
+        "settle-challenges": {
+            "task": "app.v1.tasks.alert_tasks.settle_challenges_task",
+            "schedule": crontab(minute="*/15"),  # runs alongside update-match-statuses
+        },
+        "void-postponed-challenges": {
+            "task": "app.v1.tasks.alert_tasks.void_postponed_challenges_task",
+            "schedule": crontab(minute=0),  # hourly
+        },
     },
 )
