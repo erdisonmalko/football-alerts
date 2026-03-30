@@ -94,7 +94,9 @@ async def create_server(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    server = await server_service.create_server(db, current_user.id, data.name)
+    server = await server_service.create_server(
+        db, current_user.id, data.name, data.is_public
+    )
     await db.commit()
     await db.refresh(server)
     # Return without members — client can fetch full detail separately

@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import OperationalError
+from sqlalchemy import text
 
 from app.v1.api.routes import (
     admin,
@@ -34,14 +35,13 @@ load_dotenv()  # Load environment variables from .env file
 async def _wait_for_db(retries: int = 10, delay: float = 3.0) -> None:
     """
     Retry the DB connection until Postgres is actually ready.
-    Docker healthcheck confirms the port is open, but the DB process
-    can still be initialising internally for a second or two after that.
+    Does NOT create tables — that's alembic's job.
     """
     for attempt in range(1, retries + 1):
         try:
             async with engine.begin() as conn:
-                await conn.run_sync(Base.metadata.create_all)
-            logger.info("Database ready — tables created/verified.")
+                await conn.execute(text("SELECT 1"))
+            logger.info("Database ready.")
             return
         except (OperationalError, OSError) as exc:
             if attempt == retries:

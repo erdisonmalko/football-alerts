@@ -107,9 +107,9 @@ jobs:
           APP_ENV: development
           SECRET_KEY: ci-test-secret-key
           ADMIN_KEY: ci-test-admin-key
-          LOCAL_DATABASE_URL: postgresql+asyncpg://postgres:password@localhost:5432/football_alerts_test
-          LOCAL_DATABASE_URL_SYNC: postgresql://postgres:password@localhost:5432/football_alerts_test
-        run: alembic upgrade head
+          # use DATABASE_URL which works in both Docker and local terminal (points to 'db' service in Docker, or localhost in local dev)
+          DATABASE_URL: postgresql+asyncpg://postgres:password@localhost:5432/football_alerts_test
+          DATABASE_URL_SYNC: postgresql://postgres:password@localhost:5432/football_alerts_test
 
       - name: Run integration tests
         env:
@@ -117,10 +117,8 @@ jobs:
           APP_ENV: development
           SECRET_KEY: ci-test-secret-key
           ADMIN_KEY: ci-test-admin-key
-          LOCAL_DATABASE_URL: postgresql+asyncpg://postgres:password@localhost:5432/football_alerts_test
-          LOCAL_DATABASE_URL_SYNC: postgresql://postgres:password@localhost:5432/football_alerts_test
-        run: pytest tests/v1/integration/ -v
-
+          DATABASE_URL: postgresql+asyncpg://postgres:password@localhost:5432/football_alerts_test
+          DATABASE_URL_SYNC: postgresql://postgres:password@localhost:5432/football_alerts_test
   # ── DEPLOY ────────────────────────────────────────────────────────────────────
   # Only runs on direct push to main (i.e. after a PR is merged)
   # deploy:

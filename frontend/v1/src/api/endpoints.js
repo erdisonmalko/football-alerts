@@ -82,8 +82,8 @@ export const disconnectGoogle = () =>
 export const getMyServers = () =>
   api.get('/servers').then(r => r.data)
 
-export const createServer = () =>
-  api.post('/servers')
+export const createServer = (name, isPublic) =>
+  api.post('/servers', { name, is_public: isPublic }).then(r => r.data)
 
 export const getServer = (serverId) =>
   api.get(`/servers/${serverId}`).then(r => r.data)
