@@ -42,8 +42,9 @@ async def run_async_migrations() -> None:
         # Railway sets APP_ENV=production and PROD_DATABASE_URL
         db_url = settings.PROD_DATABASE_URL
     else:
-        # Local terminal — hits localhost:5432, never Supabase
-        db_url = settings.LOCAL_DATABASE_URL
+        # Use DATABASE_URL which works in both Docker and local terminal
+        # (points to 'db' service in Docker, or localhost in local dev)
+        db_url = settings.DATABASE_URL
 
     engine = create_async_engine(db_url, poolclass=pool.NullPool)
     async with engine.connect() as connection:

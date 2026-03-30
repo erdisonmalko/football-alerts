@@ -27,6 +27,7 @@ async def create_server(
     db: AsyncSession,
     user_id: int,
     name: str,
+    is_public: bool = True,
 ) -> Server:
     code = _generate_invite_code()
     # Ensure uniqueness — extremely unlikely collision but worth checking
@@ -40,6 +41,7 @@ async def create_server(
         name=name,
         invite_code=code,
         created_by_id=user_id,
+        is_public=is_public,
     )
     db.add(server)
     await db.flush()  # get server.id before adding member
