@@ -1,8 +1,3 @@
-""
-
-4th: add to backlog -> connect to google should be a most known feature or option, we need to promote it for tow resons: 1- lowers our load of resend server to send emails 2-its propbaly better option to have google do the reminder to user - maybe we can decide to write to calendar the event in such a way users get notified often or like we would do with emails
-""
-
 # Football Alerts — Backend
 
 Email-based match reminder service. Notifies users **1 week**, **3 days**, and **6 hours** before
