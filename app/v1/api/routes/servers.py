@@ -17,7 +17,7 @@ from app.v1.core.logger import get_logger
 
 logger = get_logger(__name__)
 
-router = APIRouter(prefix="/servers", tags=["servers"])
+router = APIRouter(prefix="/servers", tags=["servers"], redirect_slashes=False)
 
 
 @router.get("/public", response_model=list[dict])
