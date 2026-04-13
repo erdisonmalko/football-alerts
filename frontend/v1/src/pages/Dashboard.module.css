@@ -417,8 +417,14 @@
   to { opacity: 1; }
 }
 
+.topActions {
+  display: flex;
+  align-items: center; /* Keeps them vertically centered with each other */
+  gap: 1.5rem;         /* Modern way to space them out */
+  margin-bottom: 1rem; /* Moves the rest of the content down */
+}
+
 .backBtn {
-  align-self: flex-start;
   padding: 0.5rem 0;
   background: none;
   border: none;
@@ -428,12 +434,25 @@
   font-weight: 600;
   cursor: pointer;
   transition: color 0.2s ease;
-  margin-bottom: 0.5rem;
 }
 
-.backBtn:hover {
-  color: var(--text);
+.leaveBtn {
+  padding: 0.5rem 0;
+  background: none;
+  border: none;
+  color: #ff4d4d;
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
 }
+
+/* Hovers stay the same */
+.backBtn:hover { color: var(--text); }
+.leaveBtn:hover { color: #ff0000; text-decoration: underline; }
+
 
 .serverHeader {
   display: flex;
@@ -616,4 +635,74 @@
   color: var(--text-4);
   padding: 2rem 1rem;
   font-size: 0.9rem;
+}
+
+/* Sub-tabs (inside SERVERS tab) */
+.subTabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+ 
+.subTab {
+  background: transparent;
+  color: var(--text-4);
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+ 
+.subTab:hover { color: var(--text-2); }
+ 
+.subTabActive {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+ 
+/* Server card actions */
+.serverCardActions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+ 
+.serverActionBtn {
+  background: var(--accent-dim);
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--accent);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+ 
+.serverActionBtn:hover:not(:disabled) {
+  background: var(--accent);
+  color: #000;
+}
+ 
+.serverActionBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+ 
+.serverPending {
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--text-4);
 }

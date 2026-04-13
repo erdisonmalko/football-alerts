@@ -319,6 +319,21 @@ async def get_public_servers(
     return output
 
 
+async def get_pending_requests_count(db: AsyncSession, user_id: int):
+    result = await db.execute(
+        select(func.count())
+        .select_from(ServerJoinRequest)
+        .join(Server, Server.id == ServerJoinRequest.server_id)
+        .join(ServerMember, ServerMember.server_id == Server.id)
+        .where(
+            ServerJoinRequest.status == JoinRequestStatus.PENDING,
+            ServerMember.user_id == user_id,
+            ServerMember.role == ServerRole.OWNER,
+        )
+    )
+    return result.scalar_one()
+
+
 async def invite_member_by_email(
     db: AsyncSession,
     server_id: int,

@@ -88,6 +88,17 @@ async def handle_join_request(
 # ----------------------------------------------------------------------------
 
 
+@router.get("/pending-requests-count", status_code=status.HTTP_200_OK)
+async def get_pending_requests_count(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Total pending join requests across all servers the user owns."""
+    count = await server_service.get_pending_requests_count(db, current_user.id)
+    return {"count": count}
+
+
+# ----------------------------------------------------------------------------
 @router.post("/", response_model=ServerOut, status_code=status.HTTP_201_CREATED)
 async def create_server(
     data: ServerCreate,
@@ -110,7 +121,7 @@ async def create_server(
     }
 
 
-@router.get("/", response_model=list[ServerListOut])
+@router.get("/my-servers", response_model=list[ServerListOut])
 async def list_my_servers(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),

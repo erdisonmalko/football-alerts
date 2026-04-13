@@ -6,6 +6,7 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import Subscriptions from './pages/Subscriptions'
+import Servers from './pages/Servers'
 import './styles/global.css'
 
 // Root redirects logged-in users to dashboard, others see landing page
@@ -25,6 +26,9 @@ export default function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/dashboard" element={
             <ProtectedRoute><Dashboard /></ProtectedRoute>
+          } />
+          <Route path="/servers" element={
+            <ProtectedRoute><Servers /></ProtectedRoute>
           } />
           <Route path="/subscriptions" element={
             <ProtectedRoute><Subscriptions /></ProtectedRoute>
