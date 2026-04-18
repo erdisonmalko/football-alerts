@@ -11,6 +11,7 @@ from app.v1.schemas.schemas import (
     # ServerMemberOut,
     ServerOut,
     ServerUpdate,
+    ServerUpdateOut,
 )
 from app.v1.services import server_service
 from app.v1.core.logger import get_logger
@@ -35,14 +36,16 @@ async def request_to_join(
     db: AsyncSession = Depends(get_db),
 ):
     try:
-        request = await server_service.request_to_join(db, server_id, current_user.id)
+        request = await server_service.save_request_to_join(
+            db, server_id, current_user.id
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     await db.commit()
     return {"status": "pending", "request_id": request.id}
 
 
-@router.get("/{server_id}/join-requests")
+@router.get("/{server_id}/join-requests/list", status_code=status.HTTP_200_OK)
 async def get_join_requests(
     server_id: int,
     current_user: User = Depends(get_current_user),
@@ -75,9 +78,15 @@ async def handle_join_request(
     db: AsyncSession = Depends(get_db),
 ):
     accept = payload.get("accept", False)
+    # convert accept to bool if it's a string
+    if isinstance(accept, str):
+        accept = accept.lower() == "accept"
+    logger.info(
+        f"Handling join request {request_id} for server {server_id} from user {current_user.id} - accept: {accept}"
+    )
     try:
         await server_service.handle_join_request(
-            db, server_id, request_id, current_user.id, accept
+            db, server_id, request_id, current_user.id, bool(accept)
         )
     except (PermissionError, ValueError) as e:
         raise HTTPException(status_code=403, detail=str(e))
@@ -95,6 +104,9 @@ async def get_pending_requests_count(
 ):
     """Total pending join requests across all servers the user owns."""
     count = await server_service.get_pending_requests_count(db, current_user.id)
+    logger.info(
+        f"User {current_user.id} has {count} pending join requests across owned servers"
+    )
     return {"count": count}
 
 
@@ -154,7 +166,7 @@ async def get_server(
     }
 
 
-@router.patch("/{server_id}", response_model=ServerOut)
+@router.patch("/{server_id}", response_model=ServerUpdateOut)
 async def update_server(
     server_id: int,
     data: ServerUpdate,
@@ -172,8 +184,9 @@ async def update_server(
         raise HTTPException(status_code=404, detail="Server not found")
 
     server.name = data.name
+    server.is_public = data.is_public
     await db.commit()
-    await db.refresh(server)
+    await db.refresh(server, ["members"])  # Refresh to get updated members if needed
     return server
 
 

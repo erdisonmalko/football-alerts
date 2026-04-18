@@ -9,7 +9,8 @@ import {
   getMyServers,
   createServer, getServer,
   getServerLeaderboard, getServerChallenges,
-  getPublicServers, requestToJoin, leaveServer
+  getPublicServers, requestToJoin, leaveServer,
+  updateServer
 } from '../api/endpoints'
 
 export default function Servers() {
@@ -81,9 +82,22 @@ export default function Servers() {
   }, [])
 
   const handleRequestToJoin = useCallback(async (serverId) => {
-    await requestToJoin(serverId)
-    await fetchPublicServers()
-  }, [fetchPublicServers])
+    try {
+      const response = await requestToJoin(serverId);
+      
+      // Log success message if your API returns one
+      console.log("Success:", response.message || "Request sent!");
+
+      await fetchPublicServers();
+    } catch (error) {
+      // This logs the specific "Already a member" or "Request already sent" message
+      const errorMessage = error.response?.data?.detail || error.message;
+      console.error("Server says:", errorMessage);
+      
+      // Optional: Alert the user so they see the reason
+      alert(errorMessage);
+    }
+  }, [fetchPublicServers]);
 
   useEffect(() => {
     fetchServers()
@@ -107,6 +121,16 @@ export default function Servers() {
     }
   }, [selectedServer]);
 
+  const handleUpdateServer = useCallback(async (serverId, name, isPublic) => {
+    try {
+      await updateServer(serverId, name, isPublic);
+      await fetchServerDetails(serverId); // Refresh details after update
+      await fetchServers(); // Refresh server list to reflect changes
+    } catch (err) {
+      console.error('Failed to update server:', err);
+      alert("Could not update the server. Please try again.");
+    }
+  }, [fetchServerDetails, fetchServers])
 
   const name = user?.full_name?.split(' ')[0] || 'Fan'
 
@@ -134,6 +158,7 @@ export default function Servers() {
             challenges={challenges}
             onBack={() => { setSelectedServer(null); setServerDetails(null) }}
             onLeave={() => handleLeaveServer(serverDetails.id)}
+            onUpdate={handleUpdateServer}
           />
           
         ) : (

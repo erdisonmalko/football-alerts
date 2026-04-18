@@ -27,10 +27,12 @@ export default function NotificationBell() {
   const fetchRequests = useCallback(async () => {
     setLoading(true)
     try {
-      const servers = await getMyServers()      
+      const servers = await getMyServers()
+      // Only fetch requests for servers the user owns
+      const ownedServers = servers.filter(server => server.is_owner === true)   
       // Fetch all requests in parallel
       const nestedRequests = await Promise.all(
-        servers.map(async (server) => {
+        ownedServers.map(async (server) => {
           try {
             const reqs = await getJoinRequests(server.id)
             return reqs.map(req => ({ 

@@ -23,6 +23,9 @@ function MyServers({ servers, onSelectServer }) {
             <h3 className={styles.serverCardName}>{server.name}</h3>
             <span className={styles.serverCardMembers}>{server.member_count || 0} members</span>
           </div>
+          {server.is_owner && (
+            <span className={styles.arrow}>OWNER</span>
+          )}
           <span className={styles.arrow}>→</span>
         </button>
       ))}
@@ -59,6 +62,9 @@ function DiscoverServers({ servers, onRequestJoin, onEnter }) {
             <h3 className={styles.serverCardName}>{server.name}</h3>
             <span className={styles.serverCardMembers}>{server.member_count || 0} members</span>
           </div>
+          {server.is_owner && (
+            <span className={styles.arrow}>OWNER</span>
+          )}
           <div className={styles.serverCardActions}>
             {server.is_member ? (
               <button

@@ -187,6 +187,15 @@ class JoinRequestOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ServerUpdateOut(BaseModel):
+    id: int
+    name: str
+    is_public: bool
+    invite_code: str
+
+    model_config = {"from_attributes": True}
+
+
 class ServerOut(BaseModel):
     id: int
     name: str

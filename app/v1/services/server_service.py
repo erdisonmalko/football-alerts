@@ -117,7 +117,9 @@ async def get_user_servers(
             )
         )
         rank = rank_result.scalar_one() + 1  # 1-indexed
-
+        print(
+            f"User={user_id}(Server={server.id}) is owner={membership.role == ServerRole.OWNER}."
+        )
         result.append(
             {
                 "id": server.id,
@@ -126,6 +128,7 @@ async def get_user_servers(
                 "member_count": member_count,
                 "your_points": membership.total_points,
                 "your_rank": rank,
+                "is_owner": membership.role == ServerRole.OWNER,
             }
         )
 
@@ -213,25 +216,42 @@ async def join_server_by_code(
         return {"server": server, "joined": False, "requested": True}
 
 
-async def request_to_join(
+async def save_request_to_join(
     db: AsyncSession,
     server_id: int,
     user_id: int,
 ) -> ServerJoinRequest:
-    """For public listing — user clicks Request to Join on a private server."""
-    existing = await get_membership(db, server_id, user_id)
-    if existing:
+    # Check Membership
+    if await get_membership(db, server_id, user_id):
         raise ValueError("Already a member")
 
-    existing_request = await db.execute(
+    # Single query for any relevant existing request
+    result = await db.execute(
         select(ServerJoinRequest).where(
             ServerJoinRequest.server_id == server_id,
             ServerJoinRequest.user_id == user_id,
+            ServerJoinRequest.status.in_(
+                [JoinRequestStatus.PENDING, JoinRequestStatus.DECLINED]
+            ),
         )
     )
-    if existing_request.scalar_one_or_none():
-        raise ValueError("Request already sent")
+    existing_req = result.scalar_one_or_none()
 
+    # Handle logic based on status
+    if existing_req:
+        if existing_req.status == JoinRequestStatus.PENDING:
+            raise ValueError("Request already sent")
+
+        if existing_req.status == JoinRequestStatus.DECLINED:
+            # maybe in the future we count the requests per user and than decide to block them,
+            # so we will allow two more requests per user after declined request,
+            # if they get all decined by owner, the will not forward more request to join this server
+            # for now will just not accept new requests after one declined request
+            raise ValueError(
+                "Previous request was declined. Please contact the server owner."
+            )
+
+    # Create new if none found
     request = ServerJoinRequest(server_id=server_id, user_id=user_id)
     db.add(request)
     await db.flush()
@@ -260,6 +280,9 @@ async def handle_join_request(
         raise ValueError("Join request not found")
 
     if accept:
+        logger.info(
+            f"Accepting join request {request_id} for server {server_id} from user {request.user_id}"
+        )
         request.status = JoinRequestStatus.ACCEPTED
         member = ServerMember(
             server_id=server_id,
@@ -268,6 +291,9 @@ async def handle_join_request(
         )
         db.add(member)
     else:
+        logger.info(
+            f"Declining join request {request_id} for server {server_id} from user {request.user_id}"
+        )
         request.status = JoinRequestStatus.DECLINED
 
     await db.flush()
@@ -312,6 +338,9 @@ async def get_public_servers(
                 "is_public": server.is_public,
                 "member_count": member_count,
                 "is_member": membership is not None,
+                "is_owner": membership.role == ServerRole.OWNER
+                if membership
+                else False,
                 "has_pending_request": pending_request is not None,
             }
         )
