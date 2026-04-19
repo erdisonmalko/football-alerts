@@ -140,7 +140,6 @@ export default function Servers() {
       <main className={styles.main}>
         <div className={styles.header}>
           <div>
-            <p className={styles.greeting}>WELCOME BACK, {name.toUpperCase()}</p>
             <h1 className={styles.title}>SERVERS</h1>
           </div>
           <button

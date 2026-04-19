@@ -1,3 +1,4 @@
+import datetime
 import secrets
 import string
 
@@ -5,14 +6,18 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.v1.models.models import (
+    InviteStatus,
     Server,
     ServerMember,
     ServerRole,
     User,
     ServerJoinRequest,
     JoinRequestStatus,
+    ServerInvite,
 )
 from app.v1.core.logger import get_logger
+from app.v1.services.server_mapper import ServerMapper
+from app.v1.services.user_service import get_user_by_email
 
 logger = get_logger(__name__)
 
@@ -99,38 +104,42 @@ async def get_user_servers(
 
     result = []
     for membership, server in rows:
-        # Count members in server
-        count_result = await db.execute(
-            select(func.count())
-            .select_from(ServerMember)
-            .where(ServerMember.server_id == server.id)
-        )
-        member_count = count_result.scalar_one()
+        dto = await ServerMapper.to_list_out(db, server, membership)
+        result.append(dto)
+    # for membership, server in rows:
+    #     # Count members in server
+    #     count_result = await db.execute(
+    #         select(func.count())
+    #         .select_from(ServerMember)
+    #         .where(ServerMember.server_id == server.id)
+    #     )
+    #     member_count = count_result.scalar_one()
 
-        # Compute rank: how many members have more points than this user
-        rank_result = await db.execute(
-            select(func.count())
-            .select_from(ServerMember)
-            .where(
-                ServerMember.server_id == server.id,
-                ServerMember.total_points > membership.total_points,
-            )
-        )
-        rank = rank_result.scalar_one() + 1  # 1-indexed
-        print(
-            f"User={user_id}(Server={server.id}) is owner={membership.role == ServerRole.OWNER}."
-        )
-        result.append(
-            {
-                "id": server.id,
-                "name": server.name,
-                "invite_code": server.invite_code,
-                "member_count": member_count,
-                "your_points": membership.total_points,
-                "your_rank": rank,
-                "is_owner": membership.role == ServerRole.OWNER,
-            }
-        )
+    #     # Compute rank: how many members have more points than this user
+    #     rank_result = await db.execute(
+    #         select(func.count())
+    #         .select_from(ServerMember)
+    #         .where(
+    #             ServerMember.server_id == server.id,
+    #             ServerMember.total_points > membership.total_points,
+    #         )
+    #     )
+    #     rank = rank_result.scalar_one() + 1  # 1-indexed
+    #     result.append(
+    #         {
+    #             "id": server.id,
+    #             "name": server.name,
+    #             "invite_code": server.invite_code,
+    #             "member_count": member_count,
+    #             "your_points": membership.total_points,
+    #             "your_rank": rank,
+    #             "is_owner": (
+    #                     membership.role.name == "OWNER"
+    #                     if membership and membership.role
+    #                     else False
+    #                 )
+    #         }
+    #     )
 
     return result
 
@@ -442,6 +451,7 @@ async def regenerate_invite_code(
     db: AsyncSession,
     server_id: int,
     user_id: int,
+    user_to_invite: int = None,
 ) -> str:
     membership = await get_membership(db, server_id, user_id)
     if not membership or membership.role != ServerRole.OWNER:
@@ -485,3 +495,146 @@ async def get_leaderboard(
         }
         for idx, (member, user) in enumerate(rows)
     ]
+
+
+# new test routes
+async def get_server_list_out(
+    db,
+    server_id: int,
+    user_id: int,
+) -> dict:
+    # fetch server
+    server_result = await db.execute(
+        select(Server).where(Server.id == server_id)
+    )
+    server = server_result.scalar_one_or_none()
+
+    if not server:
+        return None
+
+    # fetch membership
+    membership = await get_membership(db, server_id, user_id)
+    if not membership:
+        return None
+
+    # member count
+    count_result = await db.execute(
+        select(func.count())
+        .select_from(ServerMember)
+        .where(ServerMember.server_id == server_id)
+    )
+    member_count = count_result.scalar_one()
+
+    # rank
+    rank_result = await db.execute(
+        select(func.count())
+        .select_from(ServerMember)
+        .where(
+            ServerMember.server_id == server_id,
+            ServerMember.total_points > membership.total_points,
+        )
+    )
+    rank = rank_result.scalar_one() + 1
+
+    return {
+        "id": server.id,
+        "name": server.name,
+        "invite_code": server.invite_code,  # optional long-term (you may remove later)
+        "member_count": member_count,
+        "your_points": membership.total_points,
+        "your_rank": rank,
+        "is_owner": membership.role == ServerRole.OWNER,
+    }
+
+
+async def create_invite(
+    db: AsyncSession,
+    server_id: int,
+    creator_id: int,
+    invite_type: str,
+    email: str | None = None,
+    user_id: int | None = None,
+):
+    membership = await get_membership(db, server_id, creator_id)
+    if not membership or membership.role != ServerRole.OWNER:
+        raise PermissionError("Only owner can invite")
+
+    if invite_type == "code":
+        code = _generate_invite_code()
+
+        invite = ServerInvite(
+            server_id=server_id,
+            created_by_id=creator_id,
+            code=code,
+        )
+        db.add(invite)
+
+        return {"type": "code", "invite_code": code}
+
+    elif invite_type == "email":
+        if not email:
+            raise ValueError("email required")
+
+        user = await get_user_by_email(db, email)
+        if not user:
+            raise ValueError("User not found")
+
+        # create invite
+        code = _generate_invite_code()
+
+        invite = ServerInvite(
+            server_id=server_id,
+            created_by_id=creator_id,
+            code=code,
+        )
+        db.add(invite)
+
+        # trigger email (async later)
+        return {"type": "email", "email": email}
+
+    elif invite_type == "user":
+        if not user_id:
+            raise ValueError("user_id required")
+
+        # create notification logic here
+        return {"type": "user", "user_id": user_id}
+
+    else:
+        raise ValueError("Invalid invite type")
+    
+
+async def accept_invite(db: AsyncSession, user_id: int, code: str):
+    result = await db.execute(
+        select(ServerInvite).where(ServerInvite.code == code)
+    )
+    invite = result.scalar_one_or_none()
+
+    if not invite or invite.status != InviteStatus.PENDING:
+        return None
+
+    if invite.expires_at < datetime.utcnow():
+        invite.status = InviteStatus.EXPIRED
+        return None
+    
+    membership = await get_membership(db, invite.server_id, user_id)
+    server = await get_server(db, invite.server_id)
+
+    # already member check (important)
+    existing = await get_membership(db, invite.server_id, user_id)
+    if existing:
+        return await ServerMapper.to_list_out(db, server, membership)
+
+    # add member
+    db.add(ServerMember(
+        server_id=invite.server_id,
+        user_id=user_id,
+        role=ServerRole.MEMBER
+    ))
+
+    await db.flush()  # critical
+
+    # mark invite used
+    invite.status = InviteStatus.USED
+    invite.used_at = datetime.utcnow()
+
+    return await ServerMapper.to_list_out(db, server, membership)

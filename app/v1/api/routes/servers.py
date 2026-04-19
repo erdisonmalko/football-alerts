@@ -5,11 +5,12 @@ from app.v1.core.security import get_current_user
 from app.v1.db.session import get_db
 from app.v1.models.models import User, ServerRole
 from app.v1.schemas.schemas import (
+    CreateInviteRequest,
     ServerCreate,
     ServerLeaderboard,
+    ServerDetailOut,
+    ServerPublicOut,
     ServerListOut,
-    # ServerMemberOut,
-    ServerOut,
     ServerUpdate,
     ServerUpdateOut,
 )
@@ -21,7 +22,7 @@ logger = get_logger(__name__)
 router = APIRouter(prefix="/servers", tags=["servers"], redirect_slashes=False)
 
 
-@router.get("/public", response_model=list[dict])
+@router.get("/public", response_model=list[ServerPublicOut])
 async def list_public_servers(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -111,7 +112,7 @@ async def get_pending_requests_count(
 
 
 # ----------------------------------------------------------------------------
-@router.post("/", response_model=ServerOut, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=ServerListOut, status_code=status.HTTP_201_CREATED)
 async def create_server(
     data: ServerCreate,
     current_user: User = Depends(get_current_user),
@@ -130,8 +131,11 @@ async def create_server(
         "created_by_id": server.created_by_id,
         "created_at": server.created_at,
         "members": [],
+        "your_rank": 0,
+        "your_points": 0,
+        "member_count": 1,  # FIXED
+        "is_owner": True,  # FIXED
     }
-
 
 @router.get("/my-servers", response_model=list[ServerListOut])
 async def list_my_servers(
@@ -141,7 +145,7 @@ async def list_my_servers(
     return await server_service.get_user_servers(db, current_user.id)
 
 
-@router.get("/{server_id}", response_model=ServerOut)
+@router.get("/{server_id}", response_model=ServerDetailOut)
 async def get_server(
     server_id: int,
     current_user: User = Depends(get_current_user),
@@ -163,6 +167,7 @@ async def get_server(
         "created_by_id": server.created_by_id,
         "created_at": server.created_at,
         "members": members,
+        "is_owner": membership.role.value == "owner",
     }
 
 
@@ -185,12 +190,54 @@ async def update_server(
 
     server.name = data.name
     server.is_public = data.is_public
+
     await db.commit()
     await db.refresh(server, ["members"])  # Refresh to get updated members if needed
     return server
 
 
-@router.post("/join/{invite_code}", response_model=ServerOut)
+@router.post("/{server_id}/invites", status_code=201)
+async def create_invite(
+    server_id: int,
+    payload: CreateInviteRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        result = await server_service.create_invite(
+            db=db,
+            server_id=server_id,
+            creator_id=current_user.id,
+            invite_type=payload.type,
+            email=payload.email,
+            user_id=payload.user_id,
+        )
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    await db.commit()
+    return result
+
+@router.post("/invites/{invite_code}/accept", response_model=ServerListOut)
+async def accept_invite(
+    invite_code: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    server = await server_service.accept_invite(
+        db, current_user.id, invite_code
+    )
+    if not server:
+        raise HTTPException(status_code=404, detail="Invalid or expired invite")
+
+    await db.commit()
+    return server
+
+
+# old routes - can be removed after frontend migration
+@router.post("/join/{invite_code}", response_model=ServerListOut)
 async def join_by_invite(
     invite_code: str,
     current_user: User = Depends(get_current_user),
@@ -202,7 +249,7 @@ async def join_by_invite(
     await db.commit()
     return server
 
-
+# old routes - can be removed after frontend migration
 @router.post("/{server_id}/invite", status_code=status.HTTP_200_OK)
 async def invite_by_email(
     server_id: int,
@@ -227,6 +274,24 @@ async def invite_by_email(
     await db.commit()
     return {"status": "ok", "user_id": user.id, "email": user.email}
 
+# old routes - can be removed after frontend migration
+@router.post("/{server_id}/regenerate-invite", status_code=status.HTTP_200_OK)
+async def regenerate_invite(
+    server_id: int,
+    current_user: User = Depends(get_current_user),
+    user_to_invite: int = None,
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        new_code = await server_service.regenerate_invite_code(
+            db, server_id, current_user.id, user_to_invite
+        )
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+    await db.commit()
+    return {"invite_code": new_code}
+
 
 @router.delete("/{server_id}/leave", status_code=status.HTTP_204_NO_CONTENT)
 async def leave_server(
@@ -238,23 +303,6 @@ async def leave_server(
     if not left:
         raise HTTPException(status_code=404, detail="Not a member of this server")
     await db.commit()
-
-
-@router.post("/{server_id}/regenerate-invite", status_code=status.HTTP_200_OK)
-async def regenerate_invite(
-    server_id: int,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    try:
-        new_code = await server_service.regenerate_invite_code(
-            db, server_id, current_user.id
-        )
-    except PermissionError as e:
-        raise HTTPException(status_code=403, detail=str(e))
-
-    await db.commit()
-    return {"invite_code": new_code}
 
 
 @router.get("/{server_id}/leaderboard", response_model=ServerLeaderboard)
