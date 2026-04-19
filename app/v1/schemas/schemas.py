@@ -204,10 +204,12 @@ class ServerBaseOut(BaseModel):
 
     model_config = {"from_attributes": True}
 
+
 class ServerListOut(ServerBaseOut):
     your_points: int
     your_rank: int
     is_owner: bool
+
 
 class ServerPublicOut(ServerBaseOut):
     is_public: bool
@@ -331,4 +333,3 @@ class CreateInviteRequest(BaseModel):
     type: Literal["code", "email", "user"]
     email: str | None = None
     user_id: int | None = None
-

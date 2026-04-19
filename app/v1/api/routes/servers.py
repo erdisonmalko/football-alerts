@@ -137,6 +137,7 @@ async def create_server(
         "is_owner": True,  # FIXED
     }
 
+
 @router.get("/my-servers", response_model=list[ServerListOut])
 async def list_my_servers(
     current_user: User = Depends(get_current_user),
@@ -220,15 +221,14 @@ async def create_invite(
     await db.commit()
     return result
 
+
 @router.post("/invites/{invite_code}/accept", response_model=ServerListOut)
 async def accept_invite(
     invite_code: str,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    server = await server_service.accept_invite(
-        db, current_user.id, invite_code
-    )
+    server = await server_service.accept_invite(db, current_user.id, invite_code)
     if not server:
         raise HTTPException(status_code=404, detail="Invalid or expired invite")
 
@@ -248,6 +248,7 @@ async def join_by_invite(
         raise HTTPException(status_code=404, detail="Invalid invite code")
     await db.commit()
     return server
+
 
 # old routes - can be removed after frontend migration
 @router.post("/{server_id}/invite", status_code=status.HTTP_200_OK)
@@ -273,6 +274,7 @@ async def invite_by_email(
 
     await db.commit()
     return {"status": "ok", "user_id": user.id, "email": user.email}
+
 
 # old routes - can be removed after frontend migration
 @router.post("/{server_id}/regenerate-invite", status_code=status.HTTP_200_OK)

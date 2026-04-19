@@ -504,9 +504,7 @@ async def get_server_list_out(
     user_id: int,
 ) -> dict:
     # fetch server
-    server_result = await db.execute(
-        select(Server).where(Server.id == server_id)
-    )
+    server_result = await db.execute(select(Server).where(Server.id == server_id))
     server = server_result.scalar_one_or_none()
 
     if not server:
@@ -601,12 +599,10 @@ async def create_invite(
 
     else:
         raise ValueError("Invalid invite type")
-    
+
 
 async def accept_invite(db: AsyncSession, user_id: int, code: str):
-    result = await db.execute(
-        select(ServerInvite).where(ServerInvite.code == code)
-    )
+    result = await db.execute(select(ServerInvite).where(ServerInvite.code == code))
     invite = result.scalar_one_or_none()
 
     if not invite or invite.status != InviteStatus.PENDING:
@@ -615,7 +611,7 @@ async def accept_invite(db: AsyncSession, user_id: int, code: str):
     if invite.expires_at < datetime.utcnow():
         invite.status = InviteStatus.EXPIRED
         return None
-    
+
     membership = await get_membership(db, invite.server_id, user_id)
     server = await get_server(db, invite.server_id)
 
@@ -625,11 +621,11 @@ async def accept_invite(db: AsyncSession, user_id: int, code: str):
         return await ServerMapper.to_list_out(db, server, membership)
 
     # add member
-    db.add(ServerMember(
-        server_id=invite.server_id,
-        user_id=user_id,
-        role=ServerRole.MEMBER
-    ))
+    db.add(
+        ServerMember(
+            server_id=invite.server_id, user_id=user_id, role=ServerRole.MEMBER
+        )
+    )
 
     await db.flush()  # critical
 

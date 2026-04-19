@@ -1,4 +1,4 @@
-from datetime import datetime,timedelta
+from datetime import datetime, timedelta
 from typing import Optional
 
 from sqlalchemy import (
@@ -48,6 +48,7 @@ class InviteStatus(str, enum.Enum):
     USED = "used"
     EXPIRED = "expired"
     CANCELLED = "cancelled"
+
 
 class ChallengeStatus(str, enum.Enum):
     OPEN = "open"  # waiting for responses, before kickoff
@@ -394,11 +395,17 @@ class ServerInvite(Base):
     id = Column(Integer, primary_key=True, index=True)
 
     # Core relations
-    server_id = Column(Integer, ForeignKey("servers.id", ondelete="CASCADE"), nullable=False)
-    created_by_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    server_id = Column(
+        Integer, ForeignKey("servers.id", ondelete="CASCADE"), nullable=False
+    )
+    created_by_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
 
     # Optional target (for direct invites)
-    target_user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
+    target_user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+    )
     target_email = Column(String, nullable=True)
 
     # Invite mechanics
@@ -428,6 +435,7 @@ class ServerInvite(Base):
     server = relationship("Server", backref="invites")
     created_by = relationship("User", foreign_keys=[created_by_id])
     target_user = relationship("User", foreign_keys=[target_user_id])
+
 
 # ── Challenge ─────────────────────────────────────────────────────────────────
 
