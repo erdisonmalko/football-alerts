@@ -26,7 +26,7 @@ def upgrade() -> None:
                existing_nullable=False,
                existing_server_default=sa.text('now()'))
     op.drop_index('ix_google_tokens_user_id', table_name='google_tokens', if_exists=True)
-    op.create_index(op.f('ix_server_join_requests_id'), 'server_join_requests', ['id'], unique=False)
+    op.create_index(op.f('ix_server_join_requests_id'), 'server_join_requests', ['id'], unique=False, if_not_exists=True)
     # ### end Alembic commands ###
 
 
