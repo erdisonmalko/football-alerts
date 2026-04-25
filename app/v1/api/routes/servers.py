@@ -30,6 +30,7 @@ async def list_servers(
 ):
     return await server_service.get_servers(db, current_user.id)
 
+
 # make this only for public servers
 @router.post("/{server_id}/request-join", status_code=status.HTTP_201_CREATED)
 async def request_to_join_public(
@@ -45,7 +46,6 @@ async def request_to_join_public(
         raise HTTPException(status_code=400, detail=str(e))
     await db.commit()
     return {"status": "pending", "request_id": request.id}
-
 
 
 @router.post("/{server_id}/request-join-by-code", status_code=201)
@@ -64,7 +64,6 @@ async def request_to_join_private(
 
     await db.commit()
     return {"status": "pending", "request_id": request.id}
-
 
 
 @router.get("/{server_id}/join-requests/list", status_code=status.HTTP_200_OK)
@@ -218,7 +217,6 @@ async def update_server(
     return server
 
 
-
 # make this for private servers only
 @router.post("/{server_id}/invite", status_code=status.HTTP_200_OK)
 async def invite_by_email(
@@ -243,7 +241,6 @@ async def invite_by_email(
 
     await db.commit()
     return {"status": "ok", "user_id": user.id, "email": user.email}
-
 
 
 # make this for private servers only

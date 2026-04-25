@@ -229,8 +229,11 @@ class ServerDetailOut(BaseModel):
 
     model_config = {"from_attributes": True}
 
+
 class JoinByCodeIn(BaseModel):
     invite_code: str
+
+
 # ── Challenge ─────────────────────────────────────────────────────────────────
 
 

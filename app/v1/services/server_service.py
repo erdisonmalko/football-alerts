@@ -231,7 +231,7 @@ async def save_request_to_join_public_server(
     server_id: int,
     user_id: int,
 ) -> ServerJoinRequest:
-    
+
     server_result = await db.execute(
         select(Server).where(Server.id == server_id, Server.is_public.is_(True))
     )
@@ -550,4 +550,3 @@ async def get_server_list_out(
         "your_rank": rank,
         "is_owner": membership.role == ServerRole.OWNER,
     }
-
