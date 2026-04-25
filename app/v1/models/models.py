@@ -389,54 +389,6 @@ class ServerMember(Base):
     user: Mapped["User"] = relationship()
 
 
-class ServerInvite(Base):
-    __tablename__ = "server_invites"
-
-    id = Column(Integer, primary_key=True, index=True)
-
-    # Core relations
-    server_id = Column(
-        Integer, ForeignKey("servers.id", ondelete="CASCADE"), nullable=False
-    )
-    created_by_id = Column(
-        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
-    )
-
-    # Optional target (for direct invites)
-    target_user_id = Column(
-        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True
-    )
-    target_email = Column(String, nullable=True)
-
-    # Invite mechanics
-    code = Column(String, unique=True, index=True, nullable=False)
-
-    status = Column(
-        Enum(InviteStatus),
-        default=InviteStatus.PENDING,
-        nullable=False,
-    )
-
-    # One-time use enforcement
-    is_one_time = Column(Boolean, default=True, nullable=False)
-
-    # Expiration
-    expires_at = Column(
-        DateTime,
-        default=lambda: datetime.utcnow() + timedelta(days=1),  # default 24h
-        nullable=False,
-    )
-
-    # Audit
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    used_at = Column(DateTime, nullable=True)
-
-    # Relationships (optional but useful)
-    server = relationship("Server", backref="invites")
-    created_by = relationship("User", foreign_keys=[created_by_id])
-    target_user = relationship("User", foreign_keys=[target_user_id])
-
-
 # ── Challenge ─────────────────────────────────────────────────────────────────
 
 

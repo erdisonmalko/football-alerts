@@ -83,10 +83,15 @@ export const getMyServers = () =>
   api.get('/servers/my-servers').then(r => r.data)
 
 export const getPublicServers = () =>
-  api.get('/servers/public').then(r => r.data)
+  api.get('/servers').then(r => r.data)
 
 export const requestToJoin = (serverId) =>
   api.post(`/servers/${serverId}/request-join`).then(r => r.data)
+
+export const joinByInvite = (inviteCode, serverId) =>
+  api.post(`/servers/${serverId}/request-join-by-code`, {
+    invite_code: inviteCode
+  }).then(r => r.data)
 
 export const getJoinRequests = (serverId) =>
   api.get(`/servers/${serverId}/join-requests/list`).then(r => r.data)

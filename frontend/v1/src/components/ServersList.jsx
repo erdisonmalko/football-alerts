@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import styles from '../pages/Dashboard.module.css'
+import JoinPrivateServerModal from './JoinPrivateServerModal'
+import { joinByInvite } from '../api/endpoints'
 
 function MyServers({ servers, onSelectServer }) {
   if (servers.length === 0) {
@@ -33,14 +35,18 @@ function MyServers({ servers, onSelectServer }) {
   )
 }
 
+
+
 function DiscoverServers({ servers, onRequestJoin, onEnter }) {
   const [requesting, setRequesting] = useState(null)
+  const [selectedServer, setSelectedServer] = useState(null)
+  const [modalOpen, setModalOpen] = useState(false)
 
   if (servers.length === 0) {
     return (
       <div className={styles.empty}>
-        <p className={styles.emptyTitle}>NO PUBLIC SERVERS</p>
-        <p className={styles.emptySub}>No public servers available yet.</p>
+        <p className={styles.emptyTitle}>NO SERVERS</p>
+        <p className={styles.emptySub}>No servers available yet.</p>
       </div>
     )
   }
@@ -54,40 +60,81 @@ function DiscoverServers({ servers, onRequestJoin, onEnter }) {
     }
   }
 
+  const handleJoinPrivate = (server) => {
+    setSelectedServer(server)
+    setModalOpen(true)
+  }
+
+  const handleSubmitCode = async (code) => {
+    const res = await joinByInvite(code, selectedServer.id)
+
+    // optional: you can trigger refresh or optimistic UI here
+    // e.g. refetch public servers or update state
+
+    return res
+  }
+
   return (
-    <div className={styles.serversList}>
-      {servers.map(server => (
-        <div key={server.id} className={styles.serverCard}>
-          <div className={styles.serverCardContent}>
-            <h3 className={styles.serverCardName}>{server.name}</h3>
-            <span className={styles.serverCardMembers}>{server.member_count || 0} members</span>
-          </div>
-          {server.is_owner && (
-            <span className={styles.arrow}>OWNER</span>
-          )}
-          <div className={styles.serverCardActions}>
-            {server.is_member ? (
-              <button
-                className={styles.serverActionBtn}
-                onClick={() => onEnter(server.id)}
-              >
-                ENTER →
-              </button>
-            ) : server.has_pending_request ? (
-              <span className={styles.serverPending}>REQUESTED</span>
-            ) : (
-              <button
-                className={styles.serverActionBtn}
-                onClick={() => handleRequest(server.id)}
-                disabled={requesting === server.id}
-              >
-                {requesting === server.id ? '...' : server.is_public ? 'JOIN' : 'REQUEST'}
-              </button>
+    <>
+      <div className={styles.serversList}>
+        {servers.map(server => (
+          <div key={server.id} className={styles.serverCard}>
+            
+            <div className={styles.serverCardContent}>
+              <h3 className={styles.serverCardName}>{server.name}</h3>
+              <span className={styles.serverCardMembers}>
+                {server.member_count || 0} members
+              </span>
+            </div>
+
+            {server.is_owner && (
+              <span className={styles.arrow}>OWNER</span>
             )}
+
+            <div className={styles.serverCardActions}>
+              
+              {server.is_member ? (
+                <button
+                  className={styles.serverActionBtn}
+                  onClick={() => onEnter(server.id)}
+                >
+                  ENTER →
+                </button>
+
+              ) : server.has_pending_request ? (
+                <span className={styles.serverPending}>REQUESTED</span>
+
+              ) : (
+                <button
+                  className={styles.serverActionBtn}
+                  onClick={() =>
+                    server.is_public
+                      ? handleRequest(server.id)
+                      : handleJoinPrivate(server)
+                  }
+                  disabled={requesting === server.id}
+                >
+                  {requesting === server.id
+                    ? '...'
+                    : server.is_public
+                      ? 'JOIN'
+                      : 'ENTER CODE'}
+                </button>
+              )}
+
+            </div>
           </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+
+      {/* SINGLE modal instance */}
+      <JoinPrivateServerModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSubmit={handleSubmitCode}
+        serverName={selectedServer?.name}
+      />
+    </>
   )
 }
 

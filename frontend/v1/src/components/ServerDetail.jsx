@@ -79,8 +79,8 @@ export default function ServerDetail({
               EDIT SERVER
             </button>
 
-            <button onClick={() => setShowInviteModal(true)} className={styles.inviteBtn}>
-              INVITE USER
+            <button onClick={handleCopyInvite} className={styles.inviteBtn}>
+              {copied ? 'COPIED!' : 'COPY CODE'}
             </button>
           </div>
         )}
@@ -92,32 +92,54 @@ export default function ServerDetail({
 
       {/* --- SIMPLE MODAL OVERLAY --- */}
       {isEditing && (
-        <div className={styles.modalOverlay}>
+        <div className={styles.overlay}>
           <div className={styles.modal}>
-            <h3>Update Server</h3>
+
+            <h3 className={styles.title}>Edit Server</h3>
+            <p className={styles.subtitle}>
+              Update server settings
+            </p>
+
             <form onSubmit={handleSubmit}>
+
               <div className={styles.formGroup}>
-                <label>Server Name</label>
+                <label className={styles.label}>Server Name</label>
                 <input 
                   value={editName} 
                   onChange={(e) => setEditName(e.target.value)}
                   className={styles.input}
+                  placeholder="Enter server name"
                 />
               </div>
-              <div className={styles.formGroup}>
-                <label>
+
+              <div className={styles.formGroupRow}>
+                <label className={styles.checkboxLabel}>
                   <input 
                     type="checkbox" 
                     checked={editPublic} 
                     onChange={(e) => setEditPublic(e.target.checked)} 
                   />
-                  Public Server
+                  <span>Public Server</span>
                 </label>
               </div>
-              <div className={styles.modalActions}>
-                <button type="button" onClick={() => setIsEditing(false)}>Cancel</button>
-                <button type="submit" className={styles.saveBtn}>Save Changes</button>
+
+              <div className={styles.actions}>
+                <button
+                  type="button"
+                  className={styles.secondary}
+                  onClick={() => setIsEditing(false)}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  className={styles.primary}
+                >
+                  Save Changes
+                </button>
               </div>
+
             </form>
           </div>
         </div>

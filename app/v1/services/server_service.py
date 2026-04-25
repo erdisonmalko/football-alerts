@@ -13,7 +13,6 @@ from app.v1.models.models import (
     User,
     ServerJoinRequest,
     JoinRequestStatus,
-    ServerInvite,
 )
 from app.v1.core.logger import get_logger
 from app.v1.services.server_mapper import ServerMapper
@@ -176,60 +175,69 @@ async def get_server_members(
     ]
 
 
-async def join_server_by_code(
+async def request_join_private_by_code(
     db: AsyncSession,
+    server_id: int,
     user_id: int,
     invite_code: str,
-) -> dict:
-    """
-    Returns {"server": server, "joined": True} for public servers.
-    Returns {"server": server, "joined": False, "requested": True} for private.
-    """
-    server_result = await db.execute(
-        select(Server).where(Server.invite_code == invite_code)
+) -> ServerJoinRequest:
+
+    # 1. Validate server + code
+    result = await db.execute(
+        select(Server).where(
+            Server.id == server_id,
+            Server.invite_code == invite_code,
+            Server.is_public.is_(False),
+        )
     )
-    server = server_result.scalar_one_or_none()
+    server = result.scalar_one_or_none()
+
     if not server:
-        return None
+        raise ValueError("Invalid invite code")
 
-    existing = await get_membership(db, server.id, user_id)
+    # 2. Already member?
+    if await get_membership(db, server_id, user_id):
+        raise ValueError("Already a member")
+
+    # 3. Existing request?
+    result = await db.execute(
+        select(ServerJoinRequest).where(
+            ServerJoinRequest.server_id == server_id,
+            ServerJoinRequest.user_id == user_id,
+        )
+    )
+    existing = result.scalar_one_or_none()
+
     if existing:
-        return {"server": server, "joined": True, "requested": False}
+        if existing.status == JoinRequestStatus.PENDING:
+            raise ValueError("Request already sent")
 
-    if server.is_public:
-        member = ServerMember(
-            server_id=server.id,
-            user_id=user_id,
-            role=ServerRole.MEMBER,
-        )
-        db.add(member)
-        await db.flush()
-        return {"server": server, "joined": True, "requested": False}
-    else:
-        # Check if already requested
-        existing_request = await db.execute(
-            select(ServerJoinRequest).where(
-                ServerJoinRequest.server_id == server.id,
-                ServerJoinRequest.user_id == user_id,
-            )
-        )
-        if existing_request.scalar_one_or_none():
-            return {"server": server, "joined": False, "requested": True}
+        if existing.status == JoinRequestStatus.DECLINED:
+            raise ValueError("Request was declined")
 
-        request = ServerJoinRequest(
-            server_id=server.id,
-            user_id=user_id,
-        )
-        db.add(request)
-        await db.flush()
-        return {"server": server, "joined": False, "requested": True}
+    # 4. Create request
+    request = ServerJoinRequest(
+        server_id=server_id,
+        user_id=user_id,
+    )
+    db.add(request)
+    await db.flush()
+
+    return request
 
 
-async def save_request_to_join(
+async def save_request_to_join_public_server(
     db: AsyncSession,
     server_id: int,
     user_id: int,
 ) -> ServerJoinRequest:
+    
+    server_result = await db.execute(
+        select(Server).where(Server.id == server_id, Server.is_public.is_(True))
+    )
+    server = server_result.scalar_one_or_none()
+    if not server:
+        return None
     # Check Membership
     if await get_membership(db, server_id, user_id):
         raise ValueError("Already a member")
@@ -308,14 +316,14 @@ async def handle_join_request(
     await db.flush()
 
 
-async def get_public_servers(
+async def get_servers(
     db: AsyncSession,
     user_id: int,
 ) -> list[dict]:
-    """All public servers — includes membership and request status for the user."""
+    """All servers — includes membership and request status for the user."""
     result = await db.execute(
         select(Server)
-        .where(Server.is_public.is_(True))
+        # .where(Server.is_public.is_(True))
         .order_by(Server.created_at.desc())
     )
     servers = result.scalars().all()
@@ -451,7 +459,6 @@ async def regenerate_invite_code(
     db: AsyncSession,
     server_id: int,
     user_id: int,
-    user_to_invite: int = None,
 ) -> str:
     membership = await get_membership(db, server_id, user_id)
     if not membership or membership.role != ServerRole.OWNER:
@@ -497,7 +504,7 @@ async def get_leaderboard(
     ]
 
 
-# new test routes
+# new test routes - not sure
 async def get_server_list_out(
     db,
     server_id: int,
@@ -544,93 +551,3 @@ async def get_server_list_out(
         "is_owner": membership.role == ServerRole.OWNER,
     }
 
-
-async def create_invite(
-    db: AsyncSession,
-    server_id: int,
-    creator_id: int,
-    invite_type: str,
-    email: str | None = None,
-    user_id: int | None = None,
-):
-    membership = await get_membership(db, server_id, creator_id)
-    if not membership or membership.role != ServerRole.OWNER:
-        raise PermissionError("Only owner can invite")
-
-    if invite_type == "code":
-        code = _generate_invite_code()
-
-        invite = ServerInvite(
-            server_id=server_id,
-            created_by_id=creator_id,
-            code=code,
-        )
-        db.add(invite)
-
-        return {"type": "code", "invite_code": code}
-
-    elif invite_type == "email":
-        if not email:
-            raise ValueError("email required")
-
-        user = await get_user_by_email(db, email)
-        if not user:
-            raise ValueError("User not found")
-
-        # create invite
-        code = _generate_invite_code()
-
-        invite = ServerInvite(
-            server_id=server_id,
-            created_by_id=creator_id,
-            code=code,
-        )
-        db.add(invite)
-
-        # trigger email (async later)
-        return {"type": "email", "email": email}
-
-    elif invite_type == "user":
-        if not user_id:
-            raise ValueError("user_id required")
-
-        # create notification logic here
-        return {"type": "user", "user_id": user_id}
-
-    else:
-        raise ValueError("Invalid invite type")
-
-
-async def accept_invite(db: AsyncSession, user_id: int, code: str):
-    result = await db.execute(select(ServerInvite).where(ServerInvite.code == code))
-    invite = result.scalar_one_or_none()
-
-    if not invite or invite.status != InviteStatus.PENDING:
-        return None
-
-    if invite.expires_at < datetime.utcnow():
-        invite.status = InviteStatus.EXPIRED
-        return None
-
-    membership = await get_membership(db, invite.server_id, user_id)
-    server = await get_server(db, invite.server_id)
-
-    # already member check (important)
-    existing = await get_membership(db, invite.server_id, user_id)
-    if existing:
-        return await ServerMapper.to_list_out(db, server, membership)
-
-    # add member
-    db.add(
-        ServerMember(
-            server_id=invite.server_id, user_id=user_id, role=ServerRole.MEMBER
-        )
-    )
-
-    await db.flush()  # critical
-
-    # mark invite used
-    invite.status = InviteStatus.USED
-    invite.used_at = datetime.utcnow()
-
-    return await ServerMapper.to_list_out(db, server, membership)

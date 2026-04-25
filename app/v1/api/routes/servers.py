@@ -6,6 +6,7 @@ from app.v1.db.session import get_db
 from app.v1.models.models import User, ServerRole
 from app.v1.schemas.schemas import (
     CreateInviteRequest,
+    JoinByCodeIn,
     ServerCreate,
     ServerLeaderboard,
     ServerDetailOut,
@@ -22,28 +23,48 @@ logger = get_logger(__name__)
 router = APIRouter(prefix="/servers", tags=["servers"], redirect_slashes=False)
 
 
-@router.get("/public", response_model=list[ServerPublicOut])
-async def list_public_servers(
+@router.get("/", response_model=list[ServerPublicOut])
+async def list_servers(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return await server_service.get_public_servers(db, current_user.id)
+    return await server_service.get_servers(db, current_user.id)
 
-
+# make this only for public servers
 @router.post("/{server_id}/request-join", status_code=status.HTTP_201_CREATED)
-async def request_to_join(
+async def request_to_join_public(
     server_id: int,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     try:
-        request = await server_service.save_request_to_join(
+        request = await server_service.save_request_to_join_public_server(
             db, server_id, current_user.id
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     await db.commit()
     return {"status": "pending", "request_id": request.id}
+
+
+
+@router.post("/{server_id}/request-join-by-code", status_code=201)
+async def request_to_join_private(
+    server_id: int,
+    payload: JoinByCodeIn,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        request = await server_service.request_join_private_by_code(
+            db, server_id, current_user.id, payload.invite_code
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    await db.commit()
+    return {"status": "pending", "request_id": request.id}
+
 
 
 @router.get("/{server_id}/join-requests/list", status_code=status.HTTP_200_OK)
@@ -197,60 +218,8 @@ async def update_server(
     return server
 
 
-@router.post("/{server_id}/invites", status_code=201)
-async def create_invite(
-    server_id: int,
-    payload: CreateInviteRequest,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    try:
-        result = await server_service.create_invite(
-            db=db,
-            server_id=server_id,
-            creator_id=current_user.id,
-            invite_type=payload.type,
-            email=payload.email,
-            user_id=payload.user_id,
-        )
-    except PermissionError as e:
-        raise HTTPException(status_code=403, detail=str(e))
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
 
-    await db.commit()
-    return result
-
-
-@router.post("/invites/{invite_code}/accept", response_model=ServerListOut)
-async def accept_invite(
-    invite_code: str,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    server = await server_service.accept_invite(db, current_user.id, invite_code)
-    if not server:
-        raise HTTPException(status_code=404, detail="Invalid or expired invite")
-
-    await db.commit()
-    return server
-
-
-# old routes - can be removed after frontend migration
-@router.post("/join/{invite_code}", response_model=ServerListOut)
-async def join_by_invite(
-    invite_code: str,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    server = await server_service.join_server_by_code(db, current_user.id, invite_code)
-    if not server:
-        raise HTTPException(status_code=404, detail="Invalid invite code")
-    await db.commit()
-    return server
-
-
-# old routes - can be removed after frontend migration
+# make this for private servers only
 @router.post("/{server_id}/invite", status_code=status.HTTP_200_OK)
 async def invite_by_email(
     server_id: int,
@@ -276,9 +245,11 @@ async def invite_by_email(
     return {"status": "ok", "user_id": user.id, "email": user.email}
 
 
-# old routes - can be removed after frontend migration
-@router.post("/{server_id}/regenerate-invite", status_code=status.HTTP_200_OK)
-async def regenerate_invite(
+
+# make this for private servers only
+# in case admin wants t udpate the code so that old invite links stop working
+@router.post("/{server_id}/regenerate-invite-code", status_code=status.HTTP_200_OK)
+async def regenerate_invite_code(
     server_id: int,
     current_user: User = Depends(get_current_user),
     user_to_invite: int = None,
