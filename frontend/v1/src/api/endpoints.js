@@ -83,7 +83,7 @@ export const getMyServers = () =>
   api.get('/servers/my-servers').then(r => r.data)
 
 export const getPublicServers = () =>
-  api.get('/servers').then(r => r.data)
+  api.get('/servers/').then(r => r.data)
 
 export const requestToJoin = (serverId) =>
   api.post(`/servers/${serverId}/request-join`).then(r => r.data)
