@@ -42,6 +42,13 @@ class ServerRole(str, enum.Enum):
     MEMBER = "member"
 
 
+class InviteStatus(str, enum.Enum):
+    PENDING = "pending"
+    USED = "used"
+    EXPIRED = "expired"
+    CANCELLED = "cancelled"
+
+
 class ChallengeStatus(str, enum.Enum):
     OPEN = "open"  # waiting for responses, before kickoff
     LOCKED = "locked"  # kickoff passed, no more entries accepted

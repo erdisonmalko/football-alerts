@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { updateProfile, deleteAccount, getGoogleStatus, connectGoogle, disconnectGoogle } from '../api/endpoints'
 import styles from './Nav.module.css'
+import NotificationBell from './NotificationBell'
 
 export default function Nav() {
   const { user, signIn, signOut } = useAuth()
@@ -118,8 +119,11 @@ export default function Nav() {
         <Link to="/subscriptions" className={`${styles.link} ${isActive('/subscriptions') ? styles.active : ''}`}>
           ALERTS
         </Link>
+        <Link to="/servers" className={`${styles.link} ${isActive('/servers') ? styles.active : ''}`}>
+          SERVERS
+        </Link>
       </div>
-
+      <NotificationBell />
       <div className={styles.profileWrap} ref={dropdownRef}>
         <button
           className={`${styles.profileBtn} ${open ? styles.profileBtnOpen : ''}`}

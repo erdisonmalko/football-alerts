@@ -80,13 +80,44 @@ export const disconnectGoogle = () =>
 
 // Servers
 export const getMyServers = () =>
-  api.get('/servers/').then(r => r.data)
+  api.get('/servers/my-servers').then(r => r.data)
 
+export const getPublicServers = () =>
+  api.get('/servers').then(r => r.data)
+
+export const requestToJoin = (serverId) =>
+  api.post(`/servers/${serverId}/request-join`).then(r => r.data)
+
+export const joinByInvite = (inviteCode, serverId) =>
+  api.post(`/servers/${serverId}/request-join-by-code`, {
+    invite_code: inviteCode
+  }).then(r => r.data)
+
+export const getJoinRequests = (serverId) =>
+  api.get(`/servers/${serverId}/join-requests/list`).then(r => r.data)
+
+export const handleJoinRequest = (serverId, requestId, action) =>
+  api.post(`/servers/${serverId}/join-requests/${requestId}`, 
+    { accept: action }
+  ).then(r => r.data) 
+
+export const getPendingRequestsCount = () =>
+  api.get('/servers/pending-requests-count').then(r => r.data)
+ 
 export const createServer = (name, isPublic) =>
   api.post('/servers/', { name, is_public: isPublic }).then(r => r.data)
 
 export const getServer = (serverId) =>
   api.get(`/servers/${serverId}`).then(r => r.data)
+
+export const leaveServer = (serverId) =>
+  api.delete(`/servers/${serverId}/leave`).then(r => r.data)
+
+export const updateServer = (serverId, name, isPublic) =>
+  api.patch(`/servers/${serverId}`, { name, is_public: isPublic }).then(r => r.data)
+
+export const regenerateInviteCode = (serverId) =>
+  api.post(`/servers/${serverId}/regenerate-invite`).then(r => r.data)
 
 export const getServerLeaderboard = (serverId) =>
   api.get(`/servers/${serverId}/leaderboard`).then(r => r.data)

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
@@ -187,29 +187,51 @@ class JoinRequestOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class ServerOut(BaseModel):
+class ServerUpdateOut(BaseModel):
+    id: int
+    name: str
+    is_public: bool
+    invite_code: str
+
+    model_config = {"from_attributes": True}
+
+
+class ServerBaseOut(BaseModel):
+    id: int
+    name: str
+    invite_code: str
+    member_count: int
+
+    model_config = {"from_attributes": True}
+
+
+class ServerListOut(ServerBaseOut):
+    your_points: int
+    your_rank: int
+    is_owner: bool
+
+
+class ServerPublicOut(ServerBaseOut):
+    is_public: bool
+    is_member: bool
+    is_owner: bool
+    has_pending_request: bool
+
+
+class ServerDetailOut(BaseModel):
     id: int
     name: str
     invite_code: str
     created_by_id: int
     created_at: datetime
-    # Populated when fetching a single server — omitted in list views
-    members: list[ServerMemberOut] = []
+    is_owner: bool
+    members: list[ServerMemberOut]
 
     model_config = {"from_attributes": True}
 
 
-class ServerListOut(BaseModel):
-    """Lightweight version used when listing all servers a user belongs to."""
-
-    id: int
-    name: str
+class JoinByCodeIn(BaseModel):
     invite_code: str
-    member_count: int
-    your_points: int  # caller's total_points in this server
-    your_rank: int  # caller's rank by points in this server
-
-    model_config = {"from_attributes": True}
 
 
 # ── Challenge ─────────────────────────────────────────────────────────────────
@@ -309,3 +331,9 @@ class ServerLeaderboard(BaseModel):
     server_id: int
     server_name: str
     entries: list[LeaderboardEntry]
+
+
+class CreateInviteRequest(BaseModel):
+    type: Literal["code", "email", "user"]
+    email: str | None = None
+    user_id: int | None = None
