@@ -5,7 +5,6 @@ from app.v1.core.security import get_current_user
 from app.v1.db.session import get_db
 from app.v1.models.models import User, ServerRole
 from app.v1.schemas.schemas import (
-    CreateInviteRequest,
     JoinByCodeIn,
     ServerCreate,
     ServerLeaderboard,

@@ -1,9 +1,8 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import (
     Boolean,
-    Column,
     DateTime,
     Enum,
     ForeignKey,

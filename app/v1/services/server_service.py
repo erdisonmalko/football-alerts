@@ -1,4 +1,3 @@
-import datetime
 import secrets
 import string
 
@@ -6,7 +5,6 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.v1.models.models import (
-    InviteStatus,
     Server,
     ServerMember,
     ServerRole,
@@ -16,7 +14,7 @@ from app.v1.models.models import (
 )
 from app.v1.core.logger import get_logger
 from app.v1.services.server_mapper import ServerMapper
-from app.v1.services.user_service import get_user_by_email
+# from app.v1.services.user_service import get_user_by_email
 
 logger = get_logger(__name__)
 
