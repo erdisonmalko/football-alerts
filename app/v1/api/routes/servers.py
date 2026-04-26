@@ -186,8 +186,10 @@ async def get_server(
         "invite_code": server.invite_code if membership.role.value == "owner" else None,
         "created_by_id": server.created_by_id,
         "created_at": server.created_at,
-        "members": members,
+        "is_public": server.is_public,
         "is_owner": membership.role.value == "owner",
+        "members": members,
+        
     }
 
 

@@ -14,9 +14,8 @@ from app.v1.services.google_calendar_service import (
 
 from app.v1.services.match_service import get_match_by_id
 
-from app.v1.core.logger import get_logger, setup_logging
+from app.v1.core.logger import get_logger
 
-setup_logging()
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/calendar", tags=["calendar"])

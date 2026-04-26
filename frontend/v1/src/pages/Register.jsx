@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { register, login, getMe } from '../api/endpoints'
 import { useAuth } from '../context/AuthContext'
 import styles from './Auth.module.css'
+import { parseApiError } from '../api/errorHandler'
 
 export default function Register() {
   const { signIn } = useAuth()
@@ -22,7 +23,7 @@ export default function Register() {
       signIn(access_token, user)
       navigate('/subscriptions')
     } catch (err) {
-      setError(err.response?.data?.detail || 'Registration failed')
+      setError(parseApiError(err))
     } finally {
       setLoading(false)
     }

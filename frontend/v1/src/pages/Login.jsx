@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { login } from '../api/endpoints'
 import { useAuth } from '../context/AuthContext'
 import styles from './Auth.module.css'
+import { parseApiError } from '../api/errorHandler'
 
 export default function Login() {
   const { signIn } = useAuth()
@@ -21,7 +22,7 @@ export default function Login() {
       signIn(user)
       navigate('/dashboard')
     } catch (err) {
-      setError(err.response?.data?.detail || 'Login failed')
+      setError(parseApiError(err))
     } finally {
       setLoading(false)
     }

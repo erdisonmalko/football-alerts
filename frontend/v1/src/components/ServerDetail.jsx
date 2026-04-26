@@ -128,7 +128,7 @@ export default function ServerDetail({
 
         <div className={styles.metaRow}>
           <span className={styles.isPublic}>
-            {serverDetails.is_public ? 'Public' : 'Private'}
+            {serverDetails.is_public ? 'Public Server' : 'Private Server'}
           </span>
 
           <span className={styles.memberCount}>

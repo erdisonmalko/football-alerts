@@ -18,9 +18,8 @@ from app.v1.services.user_service import (
     get_user_subscriptions,
 )
 
-from app.v1.core.logger import get_logger, setup_logging
+from app.v1.core.logger import get_logger
 
-setup_logging()
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/users", tags=["users"])
