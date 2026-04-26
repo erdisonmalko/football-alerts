@@ -84,61 +84,38 @@ async def get_membership(
     return result.scalar_one_or_none()
 
 
-async def get_user_servers(
-    db: AsyncSession,
-    user_id: int,
-) -> list[dict]:
-    """
-    Returns all servers the user belongs to, with their rank and points.
-    """
-    memberships = await db.execute(
+async def get_user_servers(db: AsyncSession, user_id: int):
+    """Get all servers the user is a member of, with membership details for list view."""
+    result = await db.execute(
         select(ServerMember, Server)
         .join(Server, Server.id == ServerMember.server_id)
         .where(ServerMember.user_id == user_id)
         .order_by(Server.created_at.desc())
     )
-    rows = memberships.all()
 
-    result = []
-    for membership, server in rows:
-        dto = await ServerMapper.to_list_out(db, server, membership)
-        result.append(dto)
-    # for membership, server in rows:
-    #     # Count members in server
-    #     count_result = await db.execute(
-    #         select(func.count())
-    #         .select_from(ServerMember)
-    #         .where(ServerMember.server_id == server.id)
-    #     )
-    #     member_count = count_result.scalar_one()
+    rows = result.all()
 
-    #     # Compute rank: how many members have more points than this user
-    #     rank_result = await db.execute(
-    #         select(func.count())
-    #         .select_from(ServerMember)
-    #         .where(
-    #             ServerMember.server_id == server.id,
-    #             ServerMember.total_points > membership.total_points,
-    #         )
-    #     )
-    #     rank = rank_result.scalar_one() + 1  # 1-indexed
-    #     result.append(
-    #         {
-    #             "id": server.id,
-    #             "name": server.name,
-    #             "invite_code": server.invite_code,
-    #             "member_count": member_count,
-    #             "your_points": membership.total_points,
-    #             "your_rank": rank,
-    #             "is_owner": (
-    #                     membership.role.name == "OWNER"
-    #                     if membership and membership.role
-    #                     else False
-    #                 )
-    #         }
-    #     )
+    return [
+        await ServerMapper.to_list_out(db, server, membership)
+        for membership, server in rows
+    ]
 
-    return result
+
+async def get_servers(db: AsyncSession, user_id: int):
+    """Get all servers for discovery.
+    For each server, include whether the user is a member and their points/rank if so."""
+    # Subquery: servers where user is already a member
+    member_subq = select(ServerMember.server_id).where(ServerMember.user_id == user_id)
+
+    result = await db.execute(
+        select(Server)
+        .where(~Server.id.in_(member_subq))  # Exclude servers where user is a member
+        .order_by(Server.created_at.desc())
+    )
+
+    servers = result.scalars().all()
+
+    return [await ServerMapper.to_discover_out(db, s, user_id) for s in servers]
 
 
 async def get_server_members(
@@ -312,55 +289,6 @@ async def handle_join_request(
         request.status = JoinRequestStatus.DECLINED
 
     await db.flush()
-
-
-async def get_servers(
-    db: AsyncSession,
-    user_id: int,
-) -> list[dict]:
-    """All servers — includes membership and request status for the user."""
-    result = await db.execute(
-        select(Server)
-        # .where(Server.is_public.is_(True))
-        .order_by(Server.created_at.desc())
-    )
-    servers = result.scalars().all()
-
-    output = []
-    for server in servers:
-        count_result = await db.execute(
-            select(func.count())
-            .select_from(ServerMember)
-            .where(ServerMember.server_id == server.id)
-        )
-        member_count = count_result.scalar_one()
-        membership = await get_membership(db, server.id, user_id)
-
-        request_result = await db.execute(
-            select(ServerJoinRequest).where(
-                ServerJoinRequest.server_id == server.id,
-                ServerJoinRequest.user_id == user_id,
-                ServerJoinRequest.status == JoinRequestStatus.PENDING,
-            )
-        )
-        pending_request = request_result.scalar_one_or_none()
-
-        output.append(
-            {
-                "id": server.id,
-                "name": server.name,
-                "invite_code": server.invite_code,
-                "is_public": server.is_public,
-                "member_count": member_count,
-                "is_member": membership is not None,
-                "is_owner": membership.role == ServerRole.OWNER
-                if membership
-                else False,
-                "has_pending_request": pending_request is not None,
-            }
-        )
-
-    return output
 
 
 async def get_pending_requests_count(db: AsyncSession, user_id: int):

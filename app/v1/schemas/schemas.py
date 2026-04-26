@@ -191,7 +191,7 @@ class ServerUpdateOut(BaseModel):
     id: int
     name: str
     is_public: bool
-    invite_code: str
+    invite_code: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -199,7 +199,7 @@ class ServerUpdateOut(BaseModel):
 class ServerBaseOut(BaseModel):
     id: int
     name: str
-    invite_code: str
+    invite_code: str | None = None
     member_count: int
 
     model_config = {"from_attributes": True}
@@ -221,7 +221,7 @@ class ServerPublicOut(ServerBaseOut):
 class ServerDetailOut(BaseModel):
     id: int
     name: str
-    invite_code: str
+    invite_code: str | None = None
     created_by_id: int
     created_at: datetime
     is_owner: bool

@@ -117,7 +117,7 @@ export const updateServer = (serverId, name, isPublic) =>
   api.patch(`/servers/${serverId}`, { name, is_public: isPublic }).then(r => r.data)
 
 export const regenerateInviteCode = (serverId) =>
-  api.post(`/servers/${serverId}/regenerate-invite`).then(r => r.data)
+  api.post(`/servers/${serverId}/regenerate-invite-code`).then(r => r.data)
 
 export const getServerLeaderboard = (serverId) =>
   api.get(`/servers/${serverId}/leaderboard`).then(r => r.data)
