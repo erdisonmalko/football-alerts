@@ -29,6 +29,16 @@ jobs:
 
       - name: Ruff format check
         run: ruff format --check app/
+      
+      - name: Ruff format apply
+        run: ruff format app/
+
+      - name: Check for debug prints
+        run: |
+          if grep -r "print(" app/; then
+            echo "Debug print statements found. Please remove them before committing.";
+            exit 1;
+          fi;
 
   # ── UNIT TESTS ────────────────────────────────────────────────────────────────
   # Runs on every push to every branch

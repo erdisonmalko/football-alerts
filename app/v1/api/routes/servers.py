@@ -183,7 +183,7 @@ async def get_server(
     return {
         "id": server.id,
         "name": server.name,
-        "invite_code": server.invite_code,
+        "invite_code": server.invite_code if membership.role.value == "owner" else None,
         "created_by_id": server.created_by_id,
         "created_at": server.created_at,
         "members": members,
@@ -217,6 +217,10 @@ async def update_server(
 
 
 # make this for private servers only
+# we maybe need this when will add onboarding users flow
+# in case admin wants to invite someone by email and that person is not registered yet,
+# we can send them an invite link and when they register with that email,
+# they will be added to the server automatically
 @router.post("/{server_id}/invite", status_code=status.HTTP_200_OK)
 async def invite_by_email(
     server_id: int,
@@ -248,12 +252,11 @@ async def invite_by_email(
 async def regenerate_invite_code(
     server_id: int,
     current_user: User = Depends(get_current_user),
-    user_to_invite: int = None,
     db: AsyncSession = Depends(get_db),
 ):
     try:
         new_code = await server_service.regenerate_invite_code(
-            db, server_id, current_user.id, user_to_invite
+            db, server_id, current_user.id
         )
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))

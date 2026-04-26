@@ -1,123 +1,165 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import ServerLeaderboard from './ServerLeaderboard'
 import ServerChallenges from './ServerChallenges'
-import styles from '../pages/Dashboard.module.css'
+import styles from './ServerDetails.module.css'
 import { regenerateInviteCode } from '../api/endpoints'
 
-export default function ServerDetail({ 
-  serverDetails, 
-  leaderboard, 
-  challenges, 
-  onBack, 
-  onLeave, 
-  onUpdate // Ensure this is passed in
+export default function ServerDetail({
+  serverDetails,
+  leaderboard,
+  challenges,
+  onBack,
+  onLeave,
+  onUpdate
 }) {
   const [isEditing, setIsEditing] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+
   const [editName, setEditName] = useState(serverDetails.name)
   const [editPublic, setEditPublic] = useState(!!serverDetails.is_public)
+
+  const [inviteCode, setInviteCode] = useState(serverDetails.invite_code)
   const [copied, setCopied] = useState(false)
   const [regenerating, setRegenerating] = useState(false)
-  const [inviteCode, setInviteCode] = useState(serverDetails.invite_code)
+
+  const menuRef = useRef(null)
+
+  // Close menu on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const handleCopyInvite = async () => {
+    if (!inviteCode) return
+    await navigator.clipboard.writeText(inviteCode)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
 
   const handleRegenerateInvite = async () => {
     setRegenerating(true)
-
     try {
       const res = await regenerateInviteCode(serverDetails.id)
-
-      // backend returns { invite_code }
       setInviteCode(res.invite_code)
-
-      // optional UX: auto-copy new code
       await navigator.clipboard.writeText(res.invite_code)
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
-
-    } catch (err) {
-      console.warn('Failed to regenerate invite code', err)
     } finally {
       setRegenerating(false)
     }
   }
-  const handleCopyInvite = async () => {
-    try {
-      await navigator.clipboard.writeText(inviteCode)
-      setCopied(true)
 
-      setTimeout(() => setCopied(false), 1500)
-    } catch (err) {
-      console.warn('Clipboard copy failed', err)
-    }
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    await onUpdate(serverDetails.id, editName, !!editPublic)
+    setIsEditing(false)
   }
-    const handleSubmit = async (e) => {
-    e.preventDefault();
-    // Parent expects: serverId, name, isPublic
-    await onUpdate(serverDetails.id, editName, !!editPublic);
-    setIsEditing(false);
-  };
-
 
   return (
     <div className={styles.serverDetail}>
-      <div className={styles.topActions}>
-        <button onClick={onBack} className={styles.backBtn}>← BACK</button>
+      {/* Top bar */}
+      <div className={styles.topBar}>
+        <button onClick={onBack} className={styles.backBtn}>
+          ← BACK
+        </button>
+
+        {/* 3-dot menu */}
+        <div className={styles.menuWrapper} ref={menuRef}>
+          <button
+            className={styles.menuBtn}
+            onClick={() => setMenuOpen(prev => !prev)}
+          >
+            ⋮
+          </button>
+
+          {menuOpen && (
+            <div className={styles.dropdownMenu}>
+              {serverDetails.is_owner && (
+                <>
+                  <button
+                    className={styles.menuItem}
+                    onClick={() => {
+                      setIsEditing(true)
+                      setMenuOpen(false)
+                    }}
+                  >
+                    Edit Server
+                  </button>
+
+                  <button
+                    className={styles.menuItem}
+                    onClick={handleCopyInvite}
+                  >
+                    {copied ? 'Copied!' : 'Copy Invite Code'}
+                  </button>
+
+                  <button
+                    className={styles.menuItem}
+                    onClick={handleRegenerateInvite}
+                    disabled={regenerating}
+                  >
+                    {regenerating ? 'Regenerating...' : 'Regenerate Code'}
+                  </button>
+
+                  <div className={styles.menuDivider} />
+                </>
+              )}
+
+              <button
+                className={`${styles.menuItem} ${styles.menuItemDanger}`}
+                onClick={onLeave}
+              >
+                Leave Server
+              </button>
+            </div>
+          )}
+        </div>
       </div>
-      
-      <div className={styles.serverHeader}>
-        {/* 1. Identity */}
-        <div className={styles.headerTop}>
-          <h2 className={styles.serverName}>{serverDetails.name}</h2>
+
+      {/* Identity (clean now) */}
+      <div className={styles.serverIdentity}>
+        <h2 className={styles.serverName}>{serverDetails.name}</h2>
+
+        <div className={styles.metaRow}>
+          <span className={styles.isPublic}>
+            {serverDetails.is_public ? 'Public' : 'Private'}
+          </span>
 
           <span className={styles.memberCount}>
             {serverDetails.members?.length || 0} members
           </span>
         </div>
-        {/* 3. Actions */}
-      {serverDetails.is_owner && (
-          <div className={styles.ownerControls}>
-            <button onClick={() => setIsEditing(true)} className={styles.editBtn}>
-              EDIT SERVER
-            </button>
-
-            <button onClick={handleCopyInvite} className={styles.inviteBtn}>
-              {copied ? 'COPIED!' : 'COPY CODE'}
-            </button>
-          </div>
-        )}
-
-        <button onClick={onLeave} className={styles.leaveBtn}>
-          LEAVE SERVER
-        </button>
       </div>
 
-      {/* --- SIMPLE MODAL OVERLAY --- */}
+      {/* Edit Modal */}
       {isEditing && (
         <div className={styles.overlay}>
           <div className={styles.modal}>
-
             <h3 className={styles.title}>Edit Server</h3>
-            <p className={styles.subtitle}>
-              Update server settings
-            </p>
+            <p className={styles.subtitle}>Update server settings</p>
 
             <form onSubmit={handleSubmit}>
-
               <div className={styles.formGroup}>
                 <label className={styles.label}>Server Name</label>
-                <input 
-                  value={editName} 
+                <input
+                  value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   className={styles.input}
-                  placeholder="Enter server name"
                 />
               </div>
 
               <div className={styles.formGroupRow}>
                 <label className={styles.checkboxLabel}>
-                  <input 
-                    type="checkbox" 
-                    checked={editPublic} 
-                    onChange={(e) => setEditPublic(e.target.checked)} 
+                  <input
+                    type="checkbox"
+                    checked={editPublic}
+                    onChange={(e) => setEditPublic(e.target.checked)}
                   />
                   <span>Public Server</span>
                 </label>
@@ -132,14 +174,10 @@ export default function ServerDetail({
                   Cancel
                 </button>
 
-                <button
-                  type="submit"
-                  className={styles.primary}
-                >
+                <button type="submit" className={styles.primary}>
                   Save Changes
                 </button>
               </div>
-
             </form>
           </div>
         </div>
