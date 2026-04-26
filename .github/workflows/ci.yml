@@ -10,36 +10,18 @@ jobs:
   # ── LINT ─────────────────────────────────────────────────────────────────────
   # Runs on every push to every branch
   lint:
-    name: Lint & format check
-    runs-on: ubuntu-latest
+    - name: Ruff lint
+      run: ruff check app/
 
-    steps:
-      - uses: actions/checkout@v4
+    - name: Ruff format check
+      run: ruff format --check app/
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-
-      - name: Install lint tools
-        run: pip install ruff
-
-      - name: Ruff lint
-        run: ruff check app/
-      
-      - name: Ruff format apply
-        run: ruff format app/
-
-      
-      - name: Ruff format check
-        run: ruff format --check app/
-        
-      - name: Check for debug prints
-        run: |
-          if grep -r "print(" app/; then
-            echo "Debug print statements found. Please remove them before committing.";
-            exit 1;
-          fi;
+    - name: Check for debug prints
+      run: |
+        if grep -rn "print(" app/; then
+          echo "Debug print statements found. Please remove them."
+          exit 1
+        fi
 
   # ── UNIT TESTS ────────────────────────────────────────────────────────────────
   # Runs on every push to every branch

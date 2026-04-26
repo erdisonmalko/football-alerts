@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import ServerLeaderboard from './ServerLeaderboard'
 import ServerChallenges from './ServerChallenges'
+import CreateChallenge from './CreateChallenge'
 import styles from './ServerDetails.module.css'
 import { regenerateInviteCode } from '../api/endpoints'
 
@@ -185,6 +186,14 @@ export default function ServerDetail({
 
       <ServerLeaderboard leaderboard={leaderboard} />
       <ServerChallenges challenges={challenges} />
+      <CreateChallenge
+          serverId={serverDetails.id}
+          members={serverDetails.members || []}
+          matches={challenges?.available_matches || []} // or wherever you store them
+          onCreated={() => {
+            // refresh challenges
+          }}
+        />
     </div>
   )
 }
