@@ -26,13 +26,14 @@ jobs:
 
       - name: Ruff lint
         run: ruff check app/
-
-      - name: Ruff format check
-        run: ruff format --check app/
       
       - name: Ruff format apply
         run: ruff format app/
 
+      
+      - name: Ruff format check
+        run: ruff format --check app/
+        
       - name: Check for debug prints
         run: |
           if grep -r "print(" app/; then

@@ -17,17 +17,25 @@ from app.v1.models.models import (
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
 
-
 class UserRegister(BaseModel):
     email: EmailStr
-    password: str = Field(min_length=8, max_length=72)
-    full_name: Optional[str] = Field(default=None, max_length=255)
+    password: str
+    full_name: Optional[str] = None
 
     @field_validator("password")
     @classmethod
-    def password_strength(cls, v: str) -> str:
+    def validate_password(cls, v: str) -> str:
+        errors = []
+
+        if len(v) < 8:
+            errors.append("Password must be at least 8 characters long")
+
         if not any(c.isdigit() for c in v):
-            raise ValueError("Password must contain at least one digit")
+            errors.append("Password must contain at least one number")
+
+        if errors:
+            raise ValueError(", ".join(errors))  # still fine
+
         return v
 
 
@@ -224,6 +232,7 @@ class ServerDetailOut(BaseModel):
     invite_code: str | None = None
     created_by_id: int
     created_at: datetime
+    is_public: bool
     is_owner: bool
     members: list[ServerMemberOut]
 

@@ -11,9 +11,8 @@ from app.v1.db.session import get_db
 from app.v1.models.models import AlertType
 from app.v1.services.match_service import get_matches_due_for_alerts, sync_all_leagues
 
-from app.v1.core.logger import get_logger, setup_logging
+from app.v1.core.logger import get_logger
 
-setup_logging()
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/admin", tags=["admin"])

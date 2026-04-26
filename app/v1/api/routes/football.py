@@ -19,9 +19,8 @@ from app.v1.services.match_service import (
     get_upcoming_matches_for_browse,
     get_user_match_subscriptions,
 )
-from app.v1.core.logger import get_logger, setup_logging
+from app.v1.core.logger import get_logger
 
-setup_logging()
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/football", tags=["football"])

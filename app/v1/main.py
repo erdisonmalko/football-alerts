@@ -4,7 +4,8 @@ from dotenv import load_dotenv
 import asyncio
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import OperationalError
 from sqlalchemy import text
@@ -20,6 +21,7 @@ from app.v1.api.routes import (
     challenges,
 )
 from app.v1.core.config import settings
+from app.v1.core.exceptions import http_exception_handler, validation_exception_handler
 from app.v1.db.session import engine
 from app.v1.models.models import Base  # noqa: F401 — ensures models are registered
 
@@ -70,6 +72,9 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(HTTPException, http_exception_handler)
 
 # CORS — allow_origins must be explicit (never "*") when allow_credentials=True,
 # otherwise the browser refuses to send cookies on cross-origin requests.

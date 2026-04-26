@@ -15,9 +15,8 @@ from app.v1.models.models import User
 from app.v1.schemas.schemas import UserOut, UserRegister
 from app.v1.services.user_service import create_user, get_user_by_email
 
-from app.v1.core.logger import get_logger, setup_logging
+from app.v1.core.logger import get_logger
 
-setup_logging()
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["auth"])

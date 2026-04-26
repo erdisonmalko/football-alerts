@@ -18,9 +18,8 @@ from app.v1.services.google_calendar_service import (
     save_user_token,
 )
 
-from app.v1.core.logger import get_logger, setup_logging
+from app.v1.core.logger import get_logger
 
-setup_logging()
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/auth/google", tags=["google"])
