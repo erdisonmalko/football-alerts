@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import ServerLeaderboard from './ServerLeaderboard'
 import ServerChallenges from './ServerChallenges'
+import CreateChallenge from './CreateChallenge'
 import styles from './ServerDetails.module.css'
 import { regenerateInviteCode } from '../api/endpoints'
 
@@ -21,6 +22,8 @@ export default function ServerDetail({
   const [inviteCode, setInviteCode] = useState(serverDetails.invite_code)
   const [copied, setCopied] = useState(false)
   const [regenerating, setRegenerating] = useState(false)
+
+  const [showCreateChallenge, setShowCreateChallenge] = useState(false)
 
   const menuRef = useRef(null)
 
@@ -121,7 +124,7 @@ export default function ServerDetail({
           )}
         </div>
       </div>
-
+      
       {/* Identity (clean now) */}
       <div className={styles.serverIdentity}>
         <h2 className={styles.serverName}>{serverDetails.name}</h2>
@@ -184,7 +187,22 @@ export default function ServerDetail({
       )}
 
       <ServerLeaderboard leaderboard={leaderboard} />
+      <button
+        className={styles.challengeBtn}
+        onClick={() => setShowCreateChallenge(true)}
+      >
+        + CHALLENGE
+      </button>
       <ServerChallenges challenges={challenges} />
+      
+      {showCreateChallenge && (
+          <CreateChallenge
+            serverId={serverDetails.id}
+            members={serverDetails.members || []}
+            onCreated={() => { if (onUpdate) onUpdate() }}
+            onClose={() => setShowCreateChallenge(false)}
+          />
+        )}
     </div>
   )
 }

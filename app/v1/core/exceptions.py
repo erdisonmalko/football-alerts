@@ -7,6 +7,7 @@ def format_field(loc: tuple) -> str:
     parts = [str(x) for x in loc if x not in ("body", "query", "path")]
     return ".".join(parts)
 
+
 def unique(seq):
     seen = set()
     return [x for x in seq if not (x in seen or seen.add(x))]
@@ -30,8 +31,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             errors[field].append(msg)
 
     return JSONResponse(
-        status_code=422,
-        content={"errors": {f: unique(errors[f]) for f in errors}}
+        status_code=422, content={"errors": {f: unique(errors[f]) for f in errors}}
     )
 
 

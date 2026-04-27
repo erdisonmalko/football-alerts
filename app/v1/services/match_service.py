@@ -225,6 +225,10 @@ async def get_matches_for_user(
         elif m.status in ("SCHEDULED", "TIMED"):
             upcoming.append(m)
 
+    logger.debug(
+        f"User {user_id} matches: {len(live)} live, {len(upcoming)} upcoming, {len(finished)} finished"
+    )
+
     return {"live": live, "upcoming": upcoming, "finished": finished}
 
 

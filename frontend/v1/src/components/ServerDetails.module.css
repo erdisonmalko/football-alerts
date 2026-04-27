@@ -267,3 +267,24 @@
   gap: 1rem;
   margin-top: 0.5rem;
 }
+
+/* ── ADD to ServerDetails.module.css ── */
+
+.challengeBtn {
+  background: var(--accent-dim);
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--accent);
+  transition: all 0.15s;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.challengeBtn:hover {
+  background: var(--accent);
+  color: #000;
+}
