@@ -17,6 +17,7 @@ from app.v1.models.models import (
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
 
+
 class UserRegister(BaseModel):
     email: EmailStr
     password: str

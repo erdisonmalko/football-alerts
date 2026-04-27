@@ -15,12 +15,14 @@ router = APIRouter(tags=["challenges"])
 
 # ── Feed (across all servers) ─────────────────────────────────────────────────
 
+
 @router.get("/challenges/feed")
 async def get_challenge_feed(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     return await challenge_service.get_user_challenge_feed(db, current_user.id)
+
 
 # ── Server-scoped challenges ──────────────────────────────────────────────────
 

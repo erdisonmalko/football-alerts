@@ -189,7 +189,6 @@ async def get_server(
         "is_public": server.is_public,
         "is_owner": membership.role.value == "owner",
         "members": members,
-        
     }
 
 
