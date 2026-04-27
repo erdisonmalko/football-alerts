@@ -23,6 +23,8 @@ export default function ServerDetail({
   const [copied, setCopied] = useState(false)
   const [regenerating, setRegenerating] = useState(false)
 
+  const [showCreateChallenge, setShowCreateChallenge] = useState(false)
+
   const menuRef = useRef(null)
 
   // Close menu on outside click
@@ -122,7 +124,7 @@ export default function ServerDetail({
           )}
         </div>
       </div>
-
+      
       {/* Identity (clean now) */}
       <div className={styles.serverIdentity}>
         <h2 className={styles.serverName}>{serverDetails.name}</h2>
@@ -185,15 +187,22 @@ export default function ServerDetail({
       )}
 
       <ServerLeaderboard leaderboard={leaderboard} />
+      <button
+        className={styles.challengeBtn}
+        onClick={() => setShowCreateChallenge(true)}
+      >
+        + CHALLENGE
+      </button>
       <ServerChallenges challenges={challenges} />
-      <CreateChallenge
-          serverId={serverDetails.id}
-          members={serverDetails.members || []}
-          matches={challenges?.available_matches || []} // or wherever you store them
-          onCreated={() => {
-            // refresh challenges
-          }}
-        />
+      
+      {showCreateChallenge && (
+          <CreateChallenge
+            serverId={serverDetails.id}
+            members={serverDetails.members || []}
+            onCreated={() => { if (onUpdate) onUpdate() }}
+            onClose={() => setShowCreateChallenge(false)}
+          />
+        )}
     </div>
   )
 }

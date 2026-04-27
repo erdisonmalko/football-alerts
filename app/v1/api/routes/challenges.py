@@ -22,19 +22,6 @@ async def get_challenge_feed(
 ):
     return await challenge_service.get_user_challenge_feed(db, current_user.id)
 
-
-# ── Server-specific feed (only challenges from a specific server) ─────────────────────────────────────────────
-@router.get("/servers/{server_id}/challenges/feed")
-async def get_server_challenge_feed(
-    server_id: int,
-    # current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    return await challenge_service.get_server_challenges(
-        db, server_id#, current_user.id
-    )
-
-
 # ── Server-scoped challenges ──────────────────────────────────────────────────
 
 
