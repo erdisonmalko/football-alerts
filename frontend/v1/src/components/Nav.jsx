@@ -1,7 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { updateProfile, deleteAccount, getGoogleStatus, connectGoogle, disconnectGoogle } from '../api/endpoints'
+import { 
+  updateProfile, 
+  deleteAccount, 
+  getGoogleStatus, 
+  connectGoogle, 
+  disconnectGoogle 
+} from '../api/endpoints'
+
 import styles from './Nav.module.css'
 import NotificationBell from './NotificationBell'
 

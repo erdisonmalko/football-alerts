@@ -1,0 +1,263 @@
+.card {
+  border: 1px solid var(--border);
+  padding: 1rem 1.25rem;
+  background: var(--bg-2);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: border-color 0.15s;
+}
+
+.card:hover {
+  border-color: var(--border-2);
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.status {
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 0.2rem 0.5rem;
+}
+
+.open {
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.locked {
+  background: rgba(250, 204, 21, 0.12);
+  color: #facc15;
+  border: 1px solid rgba(250, 204, 21, 0.3);
+}
+
+.settled {
+  background: rgba(96, 165, 250, 0.12);
+  color: #60a5fa;
+  border: 1px solid rgba(96, 165, 250, 0.3);
+}
+
+.stake {
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+/* Match */
+.match {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.vs {
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--text-4);
+}
+
+/* Meta */
+.meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--text-3);
+}
+
+.time {
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #facc15;
+}
+
+/* Predictions */
+.predictions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.6rem;
+}
+
+.predictionRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+}
+
+.user {
+  color: var(--text-2);
+}
+
+.prediction {
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.participants {
+  font-size: 0.7rem;
+  color: var(--text-4);
+}
+
+/* My entry */
+.myEntry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.4rem 0.6rem;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+}
+
+.myStatus {
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 0.15rem 0.4rem;
+}
+
+.accepted {
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.pending {
+  background: rgba(250, 204, 21, 0.12);
+  color: #facc15;
+  border: 1px solid rgba(250, 204, 21, 0.3);
+}
+
+.declined {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.myPrediction {
+  font-size: 0.75rem;
+  color: var(--text-3);
+}
+
+/* Actions */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+}
+
+.input {
+  flex: 1;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border-2);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.8rem;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.input::placeholder {
+  color: var(--text-4);
+}
+
+.accept {
+  background: var(--accent-dim);
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--accent);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.accept:hover:not(:disabled) {
+  background: var(--accent);
+  color: #000;
+}
+
+.decline {
+  background: transparent;
+  color: var(--danger, #ef4444);
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.decline:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: #ef4444;
+}
+
+.accept:disabled,
+.decline:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.error {
+  font-size: 0.75rem;
+  color: #ef4444;
+  padding: 0.4rem 0.6rem;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.respondedMsg {
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid var(--border);
+  margin-top: 0.25rem;
+}
+
+.respondedMsg.accepted {
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.08);
+  border-color: rgba(34, 197, 94, 0.2);
+}
+
+.respondedMsg.declined {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.2);
+}

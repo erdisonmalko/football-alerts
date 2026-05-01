@@ -1,0 +1,26 @@
+.challengesSection {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sectionTitle {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  color: var(--text-3);
+  margin: 0;
+}
+
+.challengesList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.emptyText {
+  font-size: 0.875rem;
+  color: var(--text-4);
+  padding: 2rem 0;
+}

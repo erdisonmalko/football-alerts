@@ -68,7 +68,7 @@ async def list_server_challenges(
     if not membership:
         raise HTTPException(status_code=403, detail="Not a member of this server")
 
-    return await challenge_service.get_server_challenges(db, server_id)
+    return await challenge_service.get_server_challenges(db, server_id, current_user.id)
 
 
 @router.get("/servers/{server_id}/challenges/{challenge_id}")

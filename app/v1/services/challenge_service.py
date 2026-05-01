@@ -541,6 +541,7 @@ async def get_user_challenge_feed(
 async def get_server_challenges(
     db: AsyncSession,
     server_id: int,
+    user_id: int,
 ) -> list[dict]:
     result = await db.execute(
         select(Challenge, Match)
@@ -559,7 +560,11 @@ async def get_server_challenges(
         )
         entry_rows = entries_result.all()
 
-        item = _build_challenge_item(challenge, match)
+        item = _build_challenge_item(
+            challenge,
+            match,
+            next((e for e, _ in entry_rows if e.user_id == user_id), None),
+        )
         item["entries"] = [
             {
                 "id": entry.id,

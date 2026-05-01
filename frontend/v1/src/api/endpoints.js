@@ -132,3 +132,14 @@ export const getServerChallenges = (serverId) =>
 
 export const createChallenge = (serverId, payload) =>
   api.post(`/servers/${serverId}/challenges`, payload).then(r => r.data)
+
+// challenges
+
+export const acceptChallenge = (serverId, challengeId, prediction) =>
+  api.post(`/servers/${serverId}/challenges/${challengeId}/accept`, {
+    prediction,
+  }).then(r => r.data)
+
+export const declineChallenge = (serverId, challengeId) =>
+  api.post(`/servers/${serverId}/challenges/${challengeId}/decline`)
+     .then(r => r.data)
