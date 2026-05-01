@@ -10,7 +10,7 @@ import styles from './Dashboard.module.css'
 import {
   getMyServers,
   createServer, getServer,
-  getServerLeaderboard, getServerChallenges,
+  getServerLeaderboard,
   getPublicServers, requestToJoin, leaveServer,
   updateServer
 } from '../api/endpoints'
@@ -59,21 +59,6 @@ export default function Servers() {
     }
   }, [])
 
-  const fetchServerDetails = useCallback(async (serverId) => {
-    try {
-      const [details, leader, chal] = await Promise.all([
-        getServer(serverId),
-        getServerLeaderboard(serverId),
-        getServerChallenges(serverId),
-      ])
-      setServerDetails(details)
-      setLeaderboard(leader)
-      setChallenges(chal || [])
-      setSelectedServer(serverId)
-    } catch (err) {
-      console.error('Failed to fetch server details:', err)
-    }
-  }, [])
 
   const handleCreateServer = useCallback(async (name, isPublic) => {
     setCreatingServer(true)
@@ -137,13 +122,12 @@ export default function Servers() {
 
     try {
       await updateServer(serverId, name, isPublic)
-      await fetchServerDetails(serverId)
       await fetchServers()
     } catch (err) {
       console.error('Failed to update server:', err)
       alert("Could not update the server. Please try again.")
     }
-  }, [fetchServerDetails, fetchServers])
+  }, [fetchServers])
 
   const name = user?.full_name?.split(' ')[0] || 'Fan'
 
@@ -162,29 +146,6 @@ export default function Servers() {
             + CREATE SERVER
           </button>
         </div>
-
-        {/* {selectedServer && serverDetails ? (
-            <ServerDetail
-              serverDetails={serverDetails}
-              leaderboard={leaderboard}
-              challenges={challenges}
-              onBack={() => { setSelectedServer(null); setServerDetails(null) }}
-              onLeave={() => handleLeaveServer(serverDetails.id)}
-              onUpdate={handleUpdateServer}
-              onRefresh={() => fetchServerDetails(selectedServer)}
-            />
-          
-        ) : (
-          <ServersList
-              servers={servers}
-              publicServers={publicServers}
-              loading={serversLoading}
-              publicLoading={publicServersLoading}
-              onSelectServer={handleSelectServer}
-              onRequestJoin={handleRequestToJoin}
-              onLeaveServer={handleLeaveServer}
-            />
-        )} */}
         <ServersList
               servers={servers}
               publicServers={publicServers}

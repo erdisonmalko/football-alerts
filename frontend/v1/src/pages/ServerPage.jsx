@@ -8,6 +8,7 @@ import {
   leaveServer
 } from '../api/endpoints'
 import ServerDetail from '../components/ServerDetail'
+import styles from './ServerPage.module.css'
 
 export default function ServerPage() {
   const { id } = useParams()
@@ -27,6 +28,8 @@ export default function ServerPage() {
         getServerLeaderboard(id),
         getServerChallenges(id),
       ])
+      
+      console.log('Challenges fetched:', chal)
 
       setServerDetails(details)
       setLeaderboard(leader)
@@ -52,7 +55,14 @@ export default function ServerPage() {
     navigate('/servers')
   }
 
-  if (loading) return <div>Loading...</div>
+  if (loading) {
+    return (
+      <div className="pageLoader">
+        <div className="loader" />
+        <p className="loaderText">Loading server...</p>
+      </div>
+    )
+  }
   if (!serverDetails) return <div>Server not found</div>
 
   return (
