@@ -1,4 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
+
 import { useAuth } from '../context/AuthContext'
 import Nav from '../components/Nav'
 import ServersList from '../components/ServersList'
@@ -26,6 +28,12 @@ export default function Servers() {
   const [publicServersLoading, setPublicServersLoading] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [creatingServer, setCreatingServer] = useState(false)
+
+  const navigate = useNavigate()
+
+  const handleSelectServer = (serverId) => {
+    navigate(`/servers/${serverId}`)
+  }
 
   const fetchServers = useCallback(async () => {
     setServersLoading(true)
@@ -122,13 +130,18 @@ export default function Servers() {
   }, [selectedServer]);
 
   const handleUpdateServer = useCallback(async (serverId, name, isPublic) => {
+    if (!serverId) {
+      console.warn('updateServer called with invalid serverId:', serverId)
+      return
+    }
+
     try {
-      await updateServer(serverId, name, isPublic);
-      await fetchServerDetails(serverId); // Refresh details after update
-      await fetchServers(); // Refresh server list to reflect changes
+      await updateServer(serverId, name, isPublic)
+      await fetchServerDetails(serverId)
+      await fetchServers()
     } catch (err) {
-      console.error('Failed to update server:', err);
-      alert("Could not update the server. Please try again.");
+      console.error('Failed to update server:', err)
+      alert("Could not update the server. Please try again.")
     }
   }, [fetchServerDetails, fetchServers])
 
@@ -150,28 +163,37 @@ export default function Servers() {
           </button>
         </div>
 
-        {selectedServer && serverDetails ? (
-          <ServerDetail
-            serverDetails={serverDetails}
-            leaderboard={leaderboard}
-            challenges={challenges}
-            onBack={() => { setSelectedServer(null); setServerDetails(null) }}
-            onLeave={() => handleLeaveServer(serverDetails.id)}
-            onUpdate={handleUpdateServer}
-          />
+        {/* {selectedServer && serverDetails ? (
+            <ServerDetail
+              serverDetails={serverDetails}
+              leaderboard={leaderboard}
+              challenges={challenges}
+              onBack={() => { setSelectedServer(null); setServerDetails(null) }}
+              onLeave={() => handleLeaveServer(serverDetails.id)}
+              onUpdate={handleUpdateServer}
+              onRefresh={() => fetchServerDetails(selectedServer)}
+            />
           
         ) : (
           <ServersList
-            servers={servers}
-            publicServers={publicServers}
-            loading={serversLoading}
-            publicLoading={publicServersLoading}
-            onSelectServer={fetchServerDetails}
-            onRequestJoin={handleRequestToJoin}
-            onLeaveServer={handleLeaveServer} 
-          />
-        )}
-        
+              servers={servers}
+              publicServers={publicServers}
+              loading={serversLoading}
+              publicLoading={publicServersLoading}
+              onSelectServer={handleSelectServer}
+              onRequestJoin={handleRequestToJoin}
+              onLeaveServer={handleLeaveServer}
+            />
+        )} */}
+        <ServersList
+              servers={servers}
+              publicServers={publicServers}
+              loading={serversLoading}
+              publicLoading={publicServersLoading}
+              onSelectServer={handleSelectServer}
+              onRequestJoin={handleRequestToJoin}
+              onLeaveServer={handleLeaveServer}
+            />
         {showCreateModal && (
           <ServerCreateModal
             onClose={() => setShowCreateModal(false)}

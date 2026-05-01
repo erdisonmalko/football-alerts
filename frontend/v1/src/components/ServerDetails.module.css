@@ -3,12 +3,26 @@
   display: flex;
   flex-direction: column;
   gap: 2rem;
-  animation: fadeIn 0.2s ease;
+  max-width: 1100px;
+  margin: 0 auto;
+  width: 100%;
 }
-
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sectionTitle {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  letter-spacing: 0.12em;
+  color: var(--text-3);
 }
 
 .topActions {
@@ -33,13 +47,12 @@
 
 /* Header */
 .serverHeader {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto;
   align-items: center;
   border-bottom: 1px solid var(--border);
   padding-bottom: 1rem;
 }
-
 .headerTop {
   display: flex;
   flex-direction: column;
@@ -48,7 +61,8 @@
 
 .serverName {
   font-family: var(--font-display);
-  font-size: 2rem;
+  font-size: 2.2rem;
+  letter-spacing: -0.02em;
   font-weight: 800;
   color: var(--text);
 }
@@ -205,8 +219,9 @@
 
 .topBar {
   display: flex;
-  justify-content: space-between;
+  justify-content: space-between; /* key change */
   align-items: center;
+  width: 100%;
 }
 
 .menuWrapper {
@@ -215,12 +230,18 @@
 
 .menuBtn {
   background: none;
-  border: none;
-  font-size: 20px;
+  border: 1px solid var(--border);
+  font-size: 16px;
+  padding: 6px 8px;
+  border-radius: 6px;
   cursor: pointer;
-  color: var(--text-3);
+  color: var(--text-2);
 }
 
+.menuBtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
 .dropdownMenu {
   position: absolute;
   right: 0;
@@ -259,32 +280,50 @@
 
 .serverIdentity {
   text-align: center;
+  grid-column: 1 / -1;
 }
 
 .metaRow {
   display: flex;
   justify-content: center;
   gap: 1rem;
+  opacity: 0.7;
   margin-top: 0.5rem;
 }
 
 /* ── ADD to ServerDetails.module.css ── */
 
+.challengeBar {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -0.5rem;
+}
+
 .challengeBtn {
-  background: var(--accent-dim);
-  color: var(--accent);
+  background: var(--accent);
+  color: #000;
   font-family: var(--font-display);
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   font-weight: 700;
-  letter-spacing: 0.12em;
-  padding: 0.4rem 0.9rem;
-  border: 1px solid var(--accent);
-  transition: all 0.15s;
+  letter-spacing: 0.1em;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
   cursor: pointer;
-  white-space: nowrap;
+  transition: all 0.15s;
 }
 
 .challengeBtn:hover {
-  background: var(--accent);
-  color: #000;
+  opacity: 0.9;
+}
+.challengeGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.2rem;
+}
+
+.leaderboard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
 }
