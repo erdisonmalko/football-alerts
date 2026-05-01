@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+
 import ServerLeaderboard from './ServerLeaderboard'
 import ServerChallenges from './ServerChallenges'
 import CreateChallenge from './CreateChallenge'
@@ -11,7 +13,8 @@ export default function ServerDetail({
   challenges,
   onBack,
   onLeave,
-  onUpdate
+  onUpdate,
+  onRefresh,
 }) {
   const [isEditing, setIsEditing] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -24,9 +27,10 @@ export default function ServerDetail({
   const [regenerating, setRegenerating] = useState(false)
 
   const [showCreateChallenge, setShowCreateChallenge] = useState(false)
-
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false)
+  const [leaving, setLeaving] = useState(false)
   const menuRef = useRef(null)
-
+  
   // Close menu on outside click
   useEffect(() => {
     const handler = (e) => {
@@ -57,10 +61,19 @@ export default function ServerDetail({
       setRegenerating(false)
     }
   }
+  const navigate = useNavigate()
 
+  const confirmLeave = async () => {
+    setLeaving(true)
+    try {
+      await onLeave()
+    } finally {
+      setLeaving(false)
+    }
+  }
   const handleSubmit = async (e) => {
     e.preventDefault()
-    await onUpdate(serverDetails.id, editName, !!editPublic)
+    await onUpdate(editName, editPublic)
     setIsEditing(false)
   }
 
@@ -68,18 +81,18 @@ export default function ServerDetail({
     <div className={styles.serverDetail}>
       {/* Top bar */}
       <div className={styles.topBar}>
-        <button onClick={onBack} className={styles.backBtn}>
+        <button onClick={() => navigate('/servers')} className={styles.backBtn}>
           ← BACK
         </button>
 
         {/* 3-dot menu */}
         <div className={styles.menuWrapper} ref={menuRef}>
           <button
-            className={styles.menuBtn}
-            onClick={() => setMenuOpen(prev => !prev)}
-          >
-            ⋮
-          </button>
+              className={styles.menuBtn}
+              onClick={() => setMenuOpen(prev => !prev)}
+            >
+              ⚙️
+            </button>
 
           {menuOpen && (
             <div className={styles.dropdownMenu}>
@@ -116,7 +129,7 @@ export default function ServerDetail({
 
               <button
                 className={`${styles.menuItem} ${styles.menuItemDanger}`}
-                onClick={onLeave}
+                onClick={() => setShowLeaveConfirm(true)}
               >
                 Leave Server
               </button>
@@ -196,12 +209,54 @@ export default function ServerDetail({
       <ServerChallenges challenges={challenges} />
       
       {showCreateChallenge && (
-          <CreateChallenge
-            serverId={serverDetails.id}
-            members={serverDetails.members || []}
-            onCreated={() => { if (onUpdate) onUpdate() }}
-            onClose={() => setShowCreateChallenge(false)}
-          />
+        <CreateChallenge
+          serverId={serverDetails.id}
+          members={serverDetails.members || []}
+          onCreated={() => {
+            setShowCreateChallenge(false)
+            if (onRefresh) onRefresh()
+          }}
+          onClose={() => setShowCreateChallenge(false)}
+        />
+      )}
+
+      {showLeaveConfirm && (
+          <div className={styles.overlay} onClick={() => setShowLeaveConfirm(false)}>
+            <div
+              className={styles.modal}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className={styles.title}>Leave Server</h3>
+
+              <p className={styles.subtitle}>
+                This action is irreversible. You will lose access to this server,
+                including its challenges, leaderboard, and members.
+              </p>
+
+              <p className={styles.subtitle}>
+                You will need a new invite to join again.
+              </p>
+
+              <div className={styles.actions}>
+                <button
+                  className={styles.secondary}
+                  onClick={() => setShowLeaveConfirm(false)}
+                  disabled={leaving}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  className={styles.primary}
+                  onClick={confirmLeave}
+                  disabled={leaving}
+                  style={{ background: '#ff4d4d', color: 'white' }}
+                >
+                  {leaving ? 'Leaving...' : 'Leave Server'}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
     </div>
   )
