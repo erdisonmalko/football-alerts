@@ -29,7 +29,7 @@ export default function ChallengeCard({ challenge, tab, onRefresh }) {
   const myPrediction = challenge.my_entry?.prediction
   const challengeStatus = challenge.status
 
-  console.log("ChallengeCard", { challenge, myStatus, challengeStatus })
+  console.log("[ChallengeCard] details", { challenge, myStatus, challengeStatus })
 
   // Show actions when user has a pending entry
   const canRespond = myStatus === 'pending' && challengeStatus === 'open'

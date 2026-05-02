@@ -29,7 +29,7 @@ export default function ServerPage() {
         getServerChallenges(id),
       ])
       
-      console.log('Challenges fetched:', chal)
+      console.log('[ServerPage] Challenges fetched:', chal)
 
       setServerDetails(details)
       setLeaderboard(leader)
