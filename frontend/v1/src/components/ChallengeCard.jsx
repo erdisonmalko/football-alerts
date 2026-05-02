@@ -29,7 +29,7 @@ export default function ChallengeCard({ challenge, tab, onRefresh }) {
   const myPrediction = challenge.my_entry?.prediction
 
   // Show actions when user has a pending entry
-  const canRespond = myStatus === 'pending'
+  const canRespond = myStatus === 'pending' && challenge.status === 'open'
   const creator =
     challenge.entries?.find(e => e.user_id === challenge.created_by_id)?.full_name
     || "Unknown"
@@ -125,13 +125,7 @@ export default function ChallengeCard({ challenge, tab, onRefresh }) {
         </div>
       )}
 
-      {/* Actions  
-      SHOULD ALSO HIDE ACTIONS IN CASE OF ERRORS
-      SAY THE CHALLENGE IS SETTLED BUT USER'S APP DIDN'T GET UPDATED, 
-      THEY SHOULD NOT BE ABLE TO ACCEPT/DECLINE ANYMORE.
-      AS OF NOW USER SEES: Failed to accept, BUT THE ACCEPT/DECLINE BUTTONS ARE STILL THERE
-      , AND THEY CAN CLICK THEM AGAIN, WHICH LEADS TO MORE ERRORS.
-      */}
+      {/* Actions */}
       {canRespond && (
             responded ? (
                 <div className={`${styles.respondedMsg} ${styles[responded]}`}>
