@@ -124,8 +124,8 @@ export const getServerLeaderboard = (serverId) =>
 
 // Challenges - they go through the server because they are server-specific, 
 // and we want to show them in the server feed
-// export const getServerChallenges = () =>
-//   api.get('/challenges/feed').then(r => r.data)
+export const getChallengeFeed = () =>
+  api.get('/challenges/feed').then(r => r.data)
 
 export const getServerChallenges = (serverId) =>
   api.get(`/servers/${serverId}/challenges`).then(r => r.data)
