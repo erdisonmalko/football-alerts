@@ -29,8 +29,10 @@ export default function ChallengeCard({ challenge, tab, onRefresh }) {
   const myPrediction = challenge.my_entry?.prediction
   const challengeStatus = challenge.status
 
+  console.log("ChallengeCard", { challenge, myStatus, challengeStatus })
+
   // Show actions when user has a pending entry
-  const canRespond = myStatus === 'pending' && challengeStatus === 'open' && isIncoming
+  const canRespond = myStatus === 'pending' && challengeStatus === 'open'
   const creator =
     challenge.entries?.find(e => e.user_id === challenge.created_by_id)?.full_name
     || "Unknown"
