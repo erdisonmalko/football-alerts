@@ -129,6 +129,9 @@ export default function Nav() {
         <Link to="/servers" className={`${styles.link} ${isActive('/servers') ? styles.active : ''}`}>
           SERVERS
         </Link>
+        <Link to="/notifications" className={`${styles.link} ${isActive('/notifications') ? styles.active : ''}`}>
+          NOTIFICATIONS
+        </Link>
       </div>
       <NotificationBell />
       <div className={styles.profileWrap} ref={dropdownRef}>

@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard'
 import Subscriptions from './pages/Subscriptions'
 import Servers from './pages/Servers'
 import ServerPage from './pages/ServerPage'
+import Notifications from './pages/Notifications'
 import './styles/global.css'
 
 // Root redirects logged-in users to dashboard, others see landing page
@@ -35,6 +36,10 @@ export default function App() {
           <Route path="/servers/:id" element={
             <ProtectedRoute><ServerPage /></ProtectedRoute>
             } />
+
+          <Route path="/notifications" element={
+            <ProtectedRoute><Notifications /></ProtectedRoute>
+          } />
 
           <Route path="/subscriptions" element={
             <ProtectedRoute><Subscriptions /></ProtectedRoute>

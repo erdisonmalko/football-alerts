@@ -4,6 +4,14 @@
   gap: 1rem;
 }
 
+.sectionHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
 .sectionTitle {
   font-family: var(--font-display);
   font-size: 0.75rem;
@@ -11,6 +19,42 @@
   letter-spacing: 0.2em;
   color: var(--text-3);
   margin: 0;
+}
+
+.tabBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tabButton {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-3);
+  color: var(--text-2);
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 0.6rem 0.9rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tabButton:hover {
+  border-color: var(--text-3);
+}
+
+.activeTab {
+  background: var(--accent);
+  color: #000;
+  border-color: var(--accent);
+}
+
+.tabCount {
+  margin-left: 0.4rem;
+  color: inherit;
+  opacity: 0.9;
 }
 
 .challengesList {
