@@ -169,6 +169,43 @@ def _future_dt(days_ahead: int = 14) -> datetime:
 # ── Core seeding functions ─────────────────────────────────────────────────────
 
 
+async def seed_admin_user(db: AsyncSession) -> int:
+    """Create or get admin user, return their ID."""
+    admin_email = "admin@gmail.com"
+    admin_password_hash = bcrypt.hashpw(b"admin1234", bcrypt.gensalt()).decode()
+    
+    # Try to get existing admin
+    result = await db.execute(
+        text("SELECT id FROM users WHERE email = :email"),
+        {"email": admin_email},
+    )
+    existing_admin = result.scalar_one_or_none()
+    
+    if existing_admin:
+        print(f"  → Admin user already exists (ID: {existing_admin})")
+        return existing_admin
+    
+    # Create admin user
+    result = await db.execute(
+        text("""
+        INSERT INTO users (email, hashed_password, full_name, is_active, is_verified)
+        VALUES (:email, :hashed_password, :full_name, :is_active, :is_verified)
+        RETURNING id
+        """),
+        {
+            "email": admin_email,
+            "hashed_password": admin_password_hash,
+            "full_name": "Admin User",
+            "is_active": True,
+            "is_verified": True,
+        },
+    )
+    admin_id = result.scalar_one()
+    await db.flush()
+    print(f"  → Admin user created (ID: {admin_id})")
+    return admin_id
+
+
 async def seed_users(db: AsyncSession, count: int) -> list[int]:
     """Create seed users, return their IDs."""
     print(f"  → Creating {count} users...")
@@ -381,6 +418,7 @@ async def seed_servers(
     user_ids: list[int],
     match_ids: list[int],
     server_count: int,
+    admin_user_id: int = None,
 ) -> int:
     """Create servers with members, join requests, and challenges."""
     print(f"  → Creating {server_count} servers...")
@@ -436,10 +474,14 @@ async def seed_servers(
             },
         )
 
-        # Add 2-20 members
+        # Add 2-20 members (plus admin)
         n_members = random.randint(2, 20)
         member_pool = [uid for uid in user_ids if uid != owner_id]
         members = random.sample(member_pool, min(n_members, len(member_pool)))
+        
+        # Always add admin user if provided
+        if admin_user_id and admin_user_id not in members and admin_user_id != owner_id:
+            members.append(admin_user_id)
 
         for user_id in members:
             await db.execute(
@@ -699,7 +741,8 @@ async def main(args: argparse.Namespace) -> None:
     print(f"   Users:  {args.users}")
     print(f"   Servers: {args.servers}")
     print(f"   Mode:   {'DRY RUN' if args.dry_run else 'LIVE'}")
-    print(f"   Clean:  {args.clean}\n")
+    print(f"   Clean:  {args.clean}")
+    print(f"   Admin:  admin@gmail.com (password: admin1234)\n")
 
     engine = create_async_engine(db_url, echo=False)
     SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
@@ -717,12 +760,13 @@ async def main(args: argparse.Namespace) -> None:
             print("  DRY RUN — showing what would be created:\n")
             match_ids = await get_match_ids(db)
             print(f"  Would create:")
-            print(f"     {args.users:>6,} users (prefix: {SEED_PREFIX})")
+            print(f"     1 admin user (admin@gmail.com)")
+            print(f"     {args.users:>6,} seed users (prefix: {SEED_PREFIX})")
             print(f"     ~{args.users * 3:>5,} subscriptions (~3 per user)")
             print(
                 f"     {args.servers:>6,} servers ({int(args.servers * 0.65)} public, {int(args.servers * 0.35)} private)"
             )
-            print(f"     ~{args.servers * 10:>5,} server members")
+            print(f"     ~{args.servers * 10:>5,} server members (+ admin in each)")
             print(f"     ~{args.servers * 5:>5,} challenges")
             print(f"     ~{args.servers * 25:>5,} challenge entries")
             print(f"     ~{args.users // 7:>5,} Google tokens")
@@ -738,6 +782,10 @@ async def main(args: argparse.Namespace) -> None:
 
         print("  Starting seed...\n")
         t_start = datetime.now()
+
+        # 0. Admin user
+        admin_user_id = await seed_admin_user(db)
+        await db.commit()
 
         # 1. Users
         user_ids = await seed_users(db, args.users)
@@ -766,7 +814,7 @@ async def main(args: argparse.Namespace) -> None:
         await db.commit()
 
         # 6. Servers + members + challenges
-        await seed_servers(db, user_ids, match_ids, args.servers)
+        await seed_servers(db, user_ids, match_ids, args.servers, admin_user_id)
         await db.commit()
 
         elapsed = (datetime.now() - t_start).total_seconds()
