@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import {
   getPendingRequestsCount, getMyServers,
   getJoinRequests, handleJoinRequest,
@@ -45,7 +46,9 @@ export default function NotificationBell() {
         ownedServers.map(async (server) => {
           try {
             const reqs = await getJoinRequests(server.id)
-            return reqs.map(req => ({ serverId: server.id, serverName: server.name, request: req }))
+            return reqs.map(req => {
+              return { serverId: server.id, serverName: server.name, request: req }
+            })
           } catch {
             return []
           }
@@ -134,7 +137,15 @@ export default function NotificationBell() {
 
   const totalCount = joinRequests.length + incomingChallenges.filter(c => !responded[c.id]).length
   const isEmpty = joinRequests.length === 0 && incomingChallenges.length === 0
+  const MAX_VISIBLE = 5
 
+  // In the render:
+  const visibleJoinRequests = joinRequests.slice(0, MAX_VISIBLE)
+  const hiddenJoinCount = joinRequests.length - visibleJoinRequests.length
+
+  const visibleChallenges = incomingChallenges.filter(c => !responded[c.id]).slice(0, MAX_VISIBLE)
+  const hiddenChallengeCount = incomingChallenges.filter(c => !responded[c.id]).length - visibleChallenges.length
+  
   return (
     <div className={styles.wrap} ref={ref}>
       <button className={styles.bell} onClick={handleOpen}>
@@ -156,15 +167,18 @@ export default function NotificationBell() {
             <div className={styles.list}>
 
               {/* Join requests */}
-              {joinRequests.length > 0 && (
+              {visibleJoinRequests.length > 0 && (
                 <>
                   <p className={styles.sectionLabel}>JOIN REQUESTS</p>
-                  {joinRequests.map(({ serverId, serverName, request }) => (
+                  {visibleJoinRequests.map(({ serverId, serverName, request }) => (
                     <div key={request.id} className={styles.item}>
                       <div className={styles.itemInfo}>
+                        <p className={styles.createAt}>
+                          {new Date(request.created_at).toLocaleString()}
+                        </p>
                         <p className={styles.itemServer}>{serverName}</p>
                         <p className={styles.itemUser}>
-                          {request.user_email || `User #${request.user_id}`} wants to join
+                          {request.user_full_name} wants to join {serverName}
                         </p>
                       </div>
                       <div className={styles.itemActions}>
@@ -187,14 +201,22 @@ export default function NotificationBell() {
                   ))}
                 </>
               )}
+              {hiddenJoinCount > 0 && (
+                <Link to="/notifications" className={styles.seeMore} onClick={() => setOpen(false)}>
+                  +{hiddenJoinCount} more join requests
+                </Link>
+              )}
 
               {/* Challenge invites */}
-              {incomingChallenges.length > 0 && (
+              {visibleChallenges.length > 0 && (
                 <>
                   <p className={styles.sectionLabel}>CHALLENGE INVITES</p>
-                  {incomingChallenges.map(challenge => (
+                  {visibleChallenges.map(challenge => (
                     <div key={challenge.id} className={styles.item}>
                       <div className={styles.itemInfo}>
+                        <p className={styles.createAt}>
+                          {new Date(challenge.created_at).toLocaleString()}
+                        </p>
                         <p className={styles.itemServer}>
                           {challenge.match.home_team_name} vs {challenge.match.away_team_name}
                         </p>
@@ -243,6 +265,12 @@ export default function NotificationBell() {
                     </div>
                   ))}
                 </>
+              )}
+
+              {hiddenChallengeCount > 0 && (
+                <Link to="/notifications" className={styles.seeMore} onClick={() => setOpen(false)}>
+                  +{hiddenChallengeCount} more challenge invites
+                </Link>
               )}
 
             </div>

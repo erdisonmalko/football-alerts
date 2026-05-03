@@ -7,6 +7,7 @@ import {
   updateServer,
   leaveServer
 } from '../api/endpoints'
+import Nav from '../components/Nav'
 import ServerDetail from '../components/ServerDetail'
 import styles from './ServerPage.module.css'
 
@@ -34,6 +35,10 @@ export default function ServerPage() {
       setServerDetails(details)
       setLeaderboard(leader)
       setChallenges(chal || [])
+
+      if (import.meta.env.DEV) {
+        await new Promise(resolve => setTimeout(resolve, 10000))
+      }
     } catch (err) {
       console.error('Failed to fetch server page:', err)
     } finally {
@@ -57,22 +62,52 @@ export default function ServerPage() {
 
   if (loading) {
     return (
-      <div className="pageLoader">
-        <div className="loader" />
-        <p className="loaderText">Loading server...</p>
+      <div className={styles.page}>
+        <Nav />
+        <main className={styles.main}>
+          <div className={styles.loadingShell}>
+            <div className={styles.loadingCard}>
+              <div className={styles.loaderRow}>
+                <div className={styles.loader} />
+                <div>
+                  <p className={styles.loadingTitle}>Loading server</p>
+                  <p className={styles.loadingText}>Fetching server details and challenges…</p>
+                </div>
+              </div>
+
+              <div className={styles.skeleton} />
+              <div className={`${styles.skeleton} ${styles.skeletonShort}`} />
+              <div className={`${styles.skeleton} ${styles.skeletonLong}`} />
+            </div>
+          </div>
+        </main>
       </div>
     )
   }
-  if (!serverDetails) return <div>Server not found</div>
+  if (!serverDetails) {
+    return (
+      <div className={styles.page}>
+        <Nav />
+        <main className={styles.main}>
+          <p className={styles.errorText}>Server not found</p>
+        </main>
+      </div>
+    )
+  }
 
   return (
-    <ServerDetail
-      serverDetails={serverDetails}
-      leaderboard={leaderboard}
-      challenges={challenges}
-      onUpdate={handleUpdate}
-      onLeave={handleLeave}
-      onRefresh={fetchAll}
-    />
+    <div className={styles.page}>
+      <Nav />
+      <main className={styles.main}>
+        <ServerDetail
+          serverDetails={serverDetails}
+          leaderboard={leaderboard}
+          challenges={challenges}
+          onUpdate={handleUpdate}
+          onLeave={handleLeave}
+          onRefresh={fetchAll}
+        />
+      </main>
+    </div>
   )
 }

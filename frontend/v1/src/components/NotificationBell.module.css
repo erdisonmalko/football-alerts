@@ -262,6 +262,12 @@
   margin: 0 0 0.2rem;
 }
 
+.createAt {
+  font-size: 0.7rem;
+  color: var(--text-4);
+  margin: 0 0 0.35rem;
+}
+
 .itemUser {
   font-size: 0.78rem;
   color: var(--text-2);
@@ -361,4 +367,29 @@
   color: #ef4444;
   background: rgba(239, 68, 68, 0.08);
   border: 1px solid rgba(239, 68, 68, 0.15);
+}
+.seeMore {
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  border-top: 1px solid var(--border);
+}
+
+.seeMore:hover { color: var(--text); }
+
+.serverLink {
+  display: inline-block;
+  margin-top: 0.4rem;
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.serverLink:hover {
+  color: var(--text);
 }

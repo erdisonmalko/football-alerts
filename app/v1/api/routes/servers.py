@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from sqlalchemy import select
 from app.v1.core.security import get_current_user
 from app.v1.db.session import get_db
-from app.v1.models.models import User, ServerRole
+from app.v1.models.models import User, ServerRole, ServerJoinRequest, JoinRequestStatus
 from app.v1.schemas.schemas import (
     JoinByCodeIn,
     ServerCreate,
@@ -77,16 +77,26 @@ async def get_join_requests(
             status_code=403, detail="Only the owner can view join requests"
         )
 
-    from sqlalchemy import select
-    from app.v1.models.models import ServerJoinRequest, JoinRequestStatus
-
     result = await db.execute(
-        select(ServerJoinRequest).where(
+        select(ServerJoinRequest, User)
+        .join(User, User.id == ServerJoinRequest.user_id)
+        .where(
             ServerJoinRequest.server_id == server_id,
             ServerJoinRequest.status == JoinRequestStatus.PENDING,
         )
     )
-    return result.scalars().all()
+    rows = result.all()
+
+    return [
+        {
+            "id": req.id,
+            "user_id": req.user_id,
+            "user_email": user.email,
+            "user_full_name": user.full_name or user.email,
+            "created_at": req.created_at,
+        }
+        for req, user in rows
+    ]
 
 
 @router.post("/{server_id}/join-requests/{request_id}")
