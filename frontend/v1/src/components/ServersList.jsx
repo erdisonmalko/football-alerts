@@ -1,9 +1,18 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
+import Pagination from './Pagination'
 import styles from '../pages/Dashboard.module.css'
 import JoinPrivateServerModal from './JoinPrivateServerModal'
 import { joinByInvite } from '../api/endpoints'
 
-function MyServers({ servers, onSelectServer }) {
+const SERVERS_PER_PAGE = 15
+
+function MyServers({ servers, onSelectServer, currentPage = 1, onPageChange = () => {} }) {
+  const visibleServers = useMemo(
+    () => servers.slice((currentPage - 1) * SERVERS_PER_PAGE, currentPage * SERVERS_PER_PAGE),
+    [servers, currentPage]
+  )
+  const totalPages = Math.max(1, Math.ceil(servers.length / SERVERS_PER_PAGE))
+
   if (servers.length === 0) {
     return (
       <div className={styles.empty}>
@@ -14,33 +23,48 @@ function MyServers({ servers, onSelectServer }) {
   }
 
   return (
-    <div className={styles.serversList}>
-      {servers.map(server => (
-        <button
-          key={server.id}
-          className={styles.serverCard}
-          onClick={() => onSelectServer(server.id)}
-        >
-          <div className={styles.serverCardContent}>
-            <h3 className={styles.serverCardName}>{server.name}</h3>
-            <span className={styles.serverCardMembers}>{server.member_count || 0} members</span>
-          </div>
-          {server.is_owner && (
-            <span className={styles.arrow}>OWNER</span>
-          )}
-          <span className={styles.arrow}>→</span>
-        </button>
-      ))}
-    </div>
+    <>
+      <div className={styles.serversList}>
+        {visibleServers.map(server => (
+          <button
+            key={server.id}
+            className={styles.serverCard}
+            onClick={() => onSelectServer(server.id)}
+          >
+            <div className={styles.serverCardContent}>
+              <h3 className={styles.serverCardName}>{server.name}</h3>
+              <span className={styles.serverCardMembers}>{server.member_count || 0} members</span>
+            </div>
+            {server.is_owner && (
+              <span className={styles.arrow}>OWNER</span>
+            )}
+            <span className={styles.arrow}>→</span>
+          </button>
+        ))}
+      </div>
+      {totalPages > 1 && (
+        <Pagination
+          page={currentPage}
+          totalPages={totalPages}
+          onChange={onPageChange}
+        />
+      )}
+    </>
   )
 }
 
 
 
-function DiscoverServers({ servers, onRequestJoin, onEnter }) {
+function DiscoverServers({ servers, onRequestJoin, onEnter, currentPage = 1, onPageChange = () => {} }) {
   const [requesting, setRequesting] = useState(null)
   const [selectedServer, setSelectedServer] = useState(null)
   const [modalOpen, setModalOpen] = useState(false)
+
+  const visibleServers = useMemo(
+    () => servers.slice((currentPage - 1) * SERVERS_PER_PAGE, currentPage * SERVERS_PER_PAGE),
+    [servers, currentPage]
+  )
+  const totalPages = Math.max(1, Math.ceil(servers.length / SERVERS_PER_PAGE))
 
   if (servers.length === 0) {
     return (
@@ -77,7 +101,7 @@ function DiscoverServers({ servers, onRequestJoin, onEnter }) {
   return (
     <>
       <div className={styles.serversList}>
-        {servers.map(server => (
+        {visibleServers.map(server => (
           <div key={server.id} className={styles.serverCard}>
             
             <div className={styles.serverCardContent}>
@@ -127,6 +151,14 @@ function DiscoverServers({ servers, onRequestJoin, onEnter }) {
         ))}
       </div>
 
+      {totalPages > 1 && (
+        <Pagination
+          page={currentPage}
+          totalPages={totalPages}
+          onChange={onPageChange}
+        />
+      )}
+
       {/* SINGLE modal instance */}
       <JoinPrivateServerModal
         isOpen={modalOpen}
@@ -148,6 +180,12 @@ export default function ServersList({
   onLeaveServer
 }) {
   const [subTab, setSubTab] = useState('mine')
+  const [pageByTab, setPageByTab] = useState({ mine: 1, discover: 1 })
+
+  const currentPage = pageByTab[subTab] || 1
+  const handlePageChange = (nextPage) => {
+    setPageByTab(prev => ({ ...prev, [subTab]: nextPage }))
+  }
 
   if (loading) {
     return <div className={styles.loading}><div className={styles.loadingBar} /></div>
@@ -176,7 +214,12 @@ export default function ServersList({
       </div>
 
       {subTab === 'mine' ? (
-        <MyServers servers={servers} onSelectServer={onSelectServer} />
+        <MyServers
+          servers={servers}
+          onSelectServer={onSelectServer}
+          currentPage={currentPage}
+          onPageChange={handlePageChange}
+        />
       ) : publicLoading ? (
         <div className={styles.loading}><div className={styles.loadingBar} /></div>
       ) : (
@@ -184,6 +227,8 @@ export default function ServersList({
           servers={publicServers}
           onRequestJoin={onRequestJoin}
           onEnter={onSelectServer}
+          currentPage={currentPage}
+          onPageChange={handlePageChange}
         />
       )}
     </>
