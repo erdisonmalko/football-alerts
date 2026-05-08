@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from sqlalchemy import delete, select
+from sqlalchemy.ext import asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.v1.core.logger import get_logger
@@ -159,6 +160,8 @@ async def update_live_and_recent_matches(db: AsyncSession) -> dict[str, int]:
         except Exception as exc:
             logger.error(f"Failed to update live matches for {code}: {exc}")
             results[code] = -1
+            
+        await asyncio.sleep(1)  # stay under 10 req/min free tier limit
     return results
 
 
