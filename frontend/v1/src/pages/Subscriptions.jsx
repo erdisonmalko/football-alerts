@@ -139,6 +139,9 @@ export default function Subscriptions() {
     return subscriptions.filter(s => activeTypeFilter.has(s.subscription_type))
   }, [subscriptions, activeTypeFilter])
 
+  const upcomingLeagueOptions = useMemo(() =>
+    leagues.map(lg => ({ value: lg.code, label: lg.name })), [leagues])
+
   const subTotalPages = Math.max(1, Math.ceil(filteredSubs.length / SUB_PAGE_SIZE))
   const pagedSubs = filteredSubs.slice((subPage - 1) * SUB_PAGE_SIZE, subPage * SUB_PAGE_SIZE)
 
