@@ -9,7 +9,7 @@ function formatTimeLeft(expiresAt) {
   const end = new Date(expiresAt)
   const diff = Math.floor((end - now) / 1000)
 
-  if (diff <= 0) return "Started"
+  if (diff <= 0) return 'Started'
 
   const hours = Math.floor(diff / 3600)
   const mins = Math.floor((diff % 3600) / 60)
@@ -18,24 +18,58 @@ function formatTimeLeft(expiresAt) {
   return `${mins}m`
 }
 
+function formatKickoff(kickoffUtc) {
+  const date = new Date(kickoffUtc)
+  return date.toLocaleString([], {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+}
+
+function getMatchResult(match) {
+  if (match.status !== 'FINISHED' || match.home_score == null || match.away_score == null) {
+    return null
+  }
+  return `${match.home_score}-${match.away_score}`
+}
+
+function getOutcomeLabel(entry) {
+  if (!entry?.result) return null
+  return entry.result === 'draw'
+    ? 'Draw'
+    : entry.result === 'win'
+    ? 'Win'
+    : entry.result === 'lose'
+    ? 'Lose'
+    : null
+}
+
 export default function ChallengeCard({ challenge, tab, onRefresh }) {
   const [loading, setLoading] = useState(false)
   const [prediction, setPrediction] = useState('')
   const [error, setError] = useState(null)
   const [responded, setResponded] = useState(null) // 'accepted' | 'declined'
+  const [showParticipants, setShowParticipants] = useState(false)
   const isIncoming = tab === 'incoming'
   const isServer = tab === 'server'
   const myStatus = challenge.my_entry?.status
   const myPrediction = challenge.my_entry?.prediction
   const challengeStatus = challenge.status
+  const match = challenge.match || {}
+  const matchResult = getMatchResult(match)
+  const userOutcome = getOutcomeLabel(challenge.my_entry)
+  const participants = challenge.entries?.length || 0
 
-  console.log("[ChallengeCard] details", { challenge, myStatus, challengeStatus })
+  console.log('[ChallengeCard] details', { challenge, myStatus, challengeStatus })
 
   // Show actions when user has a pending entry
   const canRespond = myStatus === 'pending' && challengeStatus === 'open'
   const creator =
     challenge.entries?.find(e => e.user_id === challenge.created_by_id)?.full_name
-    || "Unknown"
+    || 'Unknown'
 
 
     const handleAccept = async () => {
@@ -89,10 +123,18 @@ export default function ChallengeCard({ challenge, tab, onRefresh }) {
 
       {/* Meta */}
       <div className={styles.meta}>
-        <span>by {creator}</span>
+        <span>{match.league_name || match.league_code || 'League'}</span>
         <span className={styles.time}>
-          {formatTimeLeft(challenge.expires_at)}
+          {challenge.status === 'open' || challenge.status === 'locked'
+            ? formatTimeLeft(challenge.expires_at)
+            : 'Settled'}
         </span>
+      </div>
+
+      <div className={styles.matchMeta}>
+        <span className={styles.matchStatus}>{match.status}</span>
+        <span className={styles.kickoff}>{formatKickoff(match.kickoff_utc)}</span>
+        {matchResult && <span className={styles.matchOutcome}>Final {matchResult}</span>}
       </div>
 
       {/* Predictions preview (keep your existing UI) */}
@@ -103,28 +145,52 @@ export default function ChallengeCard({ challenge, tab, onRefresh }) {
               {entry.full_name || entry.email}
             </span>
             <span className={styles.prediction}>
-              {entry.prediction || "—"}
+              {entry.prediction || '—'}
             </span>
           </div>
         ))}
       </div>
 
       {/* Participants */}
-      <div className={styles.participants}>
-        {challenge.entries?.length || 0} participants
+      <div className={styles.participantsRow}>
+        <div className={styles.participants}>
+          {participants} participants
+        </div>
+        {participants > 3 && (
+          <button
+            className={styles.viewAllBtn}
+            onClick={() => setShowParticipants(true)}
+          >
+            View all
+          </button>
+        )}
       </div>
 
       {challenge.my_entry && (
         <div className={styles.myEntry}>
-          <span className={`${styles.myStatus} ${styles[myStatus]}`}>
-            {myStatus}
-          </span>
-
-          {myPrediction && (
-            <span className={styles.myPrediction}>
-              Your pick: {myPrediction}
+          <div className={styles.myEntryLeft}>
+            <span className={`${styles.myStatus} ${styles[myStatus]}`}>
+              {myStatus}
             </span>
-          )}
+            {userOutcome && (
+              <span className={`${styles.outcomeBadge} ${styles[userOutcome.toLowerCase()]}`}>
+                {userOutcome}
+              </span>
+            )}
+          </div>
+
+          <div className={styles.myDetails}>
+            {myPrediction && (
+              <span className={styles.myPrediction}>
+                Your pick: {myPrediction}
+              </span>
+            )}
+            {challenge.my_entry.points_earned != null && (
+              <span className={styles.myOutcome}>
+                {challenge.my_entry.points_earned} pts
+              </span>
+            )}
+          </div>
         </div>
       )}
 
@@ -151,6 +217,35 @@ export default function ChallengeCard({ challenge, tab, onRefresh }) {
                 </div>
             )
             )}
+
+      {showParticipants && (
+        <div className={styles.overlay} onClick={() => setShowParticipants(false)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h3 className={styles.modalTitle}>Participants</h3>
+            <div className={styles.modalList}>
+              {challenge.entries?.map(entry => (
+                <div key={entry.id} className={styles.modalRow}>
+                  <span className={styles.modalUser}>
+                    {entry.full_name || entry.email}
+                  </span>
+                  <span className={styles.modalPrediction}>
+                    {entry.prediction || '—'}
+                  </span>
+                  <span className={`${styles.modalStatus} ${styles[entry.status]}`}>
+                    {entry.status}
+                  </span>
+                  <span className={styles.modalPoints}>
+                    {entry.points_earned != null ? `${entry.points_earned} pts` : '—'}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <button className={styles.closeBtn} onClick={() => setShowParticipants(false)}>
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
