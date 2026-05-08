@@ -35,10 +35,6 @@ export default function ServerPage() {
       setServerDetails(details)
       setLeaderboard(leader)
       setChallenges(chal || [])
-      // runs only on dev, localhost
-      if (import.meta.env.DEV) {
-        await new Promise(resolve => setTimeout(resolve, 10000))
-      }
     } catch (err) {
       console.error('Failed to fetch server page:', err)
     } finally {
