@@ -5,10 +5,11 @@ Handles OAuth token management and calendar event creation/deletion.
 """
 
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Optional, Tuple
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
+from googleapiclient.errors import HttpError
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from sqlalchemy import select
@@ -159,10 +160,12 @@ def _match_to_event(match: Match) -> dict:
     }
 
 
-def add_match_to_calendar(token: GoogleToken, match: Match) -> Optional[str]:
+def add_match_to_calendar(
+    token: GoogleToken, match: Match
+) -> Tuple[Optional[str], Optional[str]]:
     """
     Adds a match event to the user's Google Calendar.
-    Returns the Google Calendar event ID on success, None on failure.
+    Returns a tuple of (event_id, error_code).
     """
     try:
         creds = _build_credentials(token)
@@ -176,21 +179,26 @@ def add_match_to_calendar(token: GoogleToken, match: Match) -> Optional[str]:
             )
             .execute()
         )
+        event_id = event.get("id")
         logger.info(
             "Added calendar event for match %s user %s event_id=%s",
             match.external_id,
             token.user_id,
-            event.get("id"),
+            event_id,
         )
-        return event.get("id")
-    except Exception as exc:
-        logger.error(
-            "Failed to add calendar event for match %s user %s: %s",
-            match.external_id,
-            token.user_id,
-            exc,
-        )
-        return None
+        return event_id, None
+    except Exception as e:
+        error_str = str(e)
+        if "invalid_grant" in error_str:
+            logger.warning(
+                "Invalid grant for user %s — token revoked or expired. "
+                "User needs to reconnect Google.",
+                token.user_id,
+            )
+            return None, "invalid_grant"
+
+        logger.error("Failed to add calendar event: %s", e)
+        return None, "error"
 
 
 def remove_match_from_calendar(token: GoogleToken, event_id: str) -> bool:
@@ -293,7 +301,15 @@ async def sync_subscriptions_to_calendar(
         if match.kickoff_utc <= now:
             continue
 
-        event_id = add_match_to_calendar(token, match)
+        event_id, error = add_match_to_calendar(token, match)
+
+        if error == "invalid_grant":
+            logger.warning(
+                "Token invalid for user %s while syncing subscriptions; clearing stale token.",
+                user.id,
+            )
+            await delete_user_token(db, user.id)
+            break
 
         if event_id:
             await create_calendar_event(

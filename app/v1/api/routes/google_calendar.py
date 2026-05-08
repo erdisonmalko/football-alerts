@@ -7,6 +7,7 @@ from app.v1.db.session import get_db
 from app.v1.services.google_calendar_service import (
     get_user_token,
     add_match_to_calendar,
+    delete_user_token,
     remove_match_from_calendar,
     create_calendar_event,
     get_calendar_event,
@@ -60,7 +61,12 @@ async def add_match_to_calendar_endpoint(
         )
         return {"event_id": existing.google_event_id}
 
-    event_id = add_match_to_calendar(token, match)
+    event_id, error = add_match_to_calendar(token, match)
+
+    if error == "invalid_grant":
+        await delete_user_token(db, user.id)
+        await db.commit()
+        raise HTTPException(status_code=401, detail="GOOGLE_TOKEN_EXPIRED")
 
     if not event_id:
         raise HTTPException(status_code=500, detail="FAILED_TO_CREATE_EVENT")

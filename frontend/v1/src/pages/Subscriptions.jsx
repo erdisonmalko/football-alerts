@@ -63,6 +63,7 @@ export default function Subscriptions() {
   const [modalOpen, setModalOpen] = useState(false)
   const [modalConnected, setModalConnected] = useState(false)
   const [pendingMatchId, setPendingMatchId] = useState(null)
+  const [googleModalError, setGoogleModalError] = useState('')
 
   // Filters
   const [upcomingLeagueFilter, setUpcomingLeagueFilter] = useState(new Set())
@@ -90,36 +91,43 @@ export default function Subscriptions() {
   // On mount: load data + resume any pending calendar sync after OAuth redirect
   useEffect(() => {
     const init = async () => {
-      const [subs, lgs] = await Promise.all([
-        getSubscriptions(),
-        getLeagues(),
-        fetchMatches(1),
-      ])
-      setSubscriptions(subs)
-      setLeagues(lgs)
+      try {
+        const [subs, lgs] = await Promise.all([
+          getSubscriptions(),
+          getLeagues(),
+          fetchMatches(1),
+        ])
+        setSubscriptions(subs)
+        setLeagues(lgs)
 
-      // Resume pending calendar sync after Google OAuth redirect
-      const storedMatchId = localStorage.getItem('pending_match_id')
-      if (storedMatchId) {
-        localStorage.removeItem('pending_match_id')
-        try {
+        // Resume pending calendar sync after Google OAuth redirect
+        const storedMatchId = localStorage.getItem('pending_match_id')
+        if (storedMatchId) {
+          localStorage.removeItem('pending_match_id')
+          setPendingMatchId(storedMatchId)
+
           const status = await getGoogleStatus()
+          setModalConnected(status.connected)
+
           if (status.connected) {
-            await addMatchToCalendar(storedMatchId)
+            const success = await attemptAddMatchToCalendar(storedMatchId)
+            if (!success) {
+              setModalOpen(true)
+            }
+          } else {
+            setModalOpen(true)
           }
-        } catch {
-          // Silent — calendar sync is optional
         }
+      } catch {
+        setModalConnected(false)
+        setModalOpen(true)
+      } finally {
+        setLoadingInit(false)
       }
     }
 
-    init().finally(() => setLoadingInit(false))
+    init()
   }, [fetchMatches])
-
-  const upcomingLeagueOptions = useMemo(() => {
-    const codes = [...new Set(matches.map(m => m.league_code))].sort()
-    return codes.map(code => ({ value: code, label: code }))
-  }, [matches])
 
   const filteredMatches = useMemo(() => {
     if (upcomingLeagueFilter.size === 0) return matches
@@ -160,6 +168,25 @@ export default function Subscriptions() {
     await fetchMatches(p)
   }
 
+  const attemptAddMatchToCalendar = async (matchId) => {
+    if (!matchId) return false
+    try {
+      await addMatchToCalendar(matchId)
+      setGoogleModalError('')
+      return true
+    } catch (err) {
+      const status = err.response?.status
+      const detail = err.response?.data?.detail
+      if (status === 401 && detail === 'GOOGLE_TOKEN_EXPIRED') {
+        setModalConnected(false)
+        setGoogleModalError('Your Google connection has expired. Please reconnect.')
+        return false
+      }
+      setError(detail || 'Failed to add match to calendar')
+      return false
+    }
+  }
+
   const isSubscribed = (type, externalId) =>
     subscriptions.some(s => s.subscription_type === type && s.external_id === String(externalId))
 
@@ -180,6 +207,7 @@ export default function Subscriptions() {
         const status = await getGoogleStatus()
         setPendingMatchId(externalId)
         setModalConnected(status.connected)
+        setGoogleModalError('')
         setModalOpen(true)
       }
     } catch (err) {
@@ -224,12 +252,10 @@ export default function Subscriptions() {
   const handleModalConfirm = async () => {
     if (!pendingMatchId) return
     setCalendarSyncing(true)
-    try {
-      await addMatchToCalendar(pendingMatchId)
-    } catch {
-      // Silent — calendar sync is optional
-    } finally {
-      setCalendarSyncing(false)
+    const success = await attemptAddMatchToCalendar(pendingMatchId)
+    setCalendarSyncing(false)
+
+    if (success) {
       setModalOpen(false)
       setPendingMatchId(null)
     }
@@ -267,6 +293,7 @@ export default function Subscriptions() {
           isOpen={modalOpen}
           isConnected={modalConnected}
           syncing={calendarSyncing}
+          errorMessage={googleModalError}
           onClose={handleModalClose}
           onConnect={handleModalConnect}
           onConfirm={handleModalConfirm}
