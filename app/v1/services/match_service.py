@@ -160,7 +160,7 @@ async def update_live_and_recent_matches(db: AsyncSession) -> dict[str, int]:
         except Exception as exc:
             logger.error(f"Failed to update live matches for {code}: {exc}")
             results[code] = -1
-            
+
         await asyncio.sleep(1)  # stay under 10 req/min free tier limit
     return results
 

@@ -11,12 +11,12 @@ from app.v1.db.session import get_db
 from app.v1.models.models import AlertType
 from app.v1.services.match_service import get_matches_due_for_alerts, sync_all_leagues
 from app.v1.services.challenge_service import (
-        find_challenges_to_settle,
-        lock_expired_challenges,
-        settle_challenge,
-        find_challenges_to_void,
-        void_challenge,
-    )
+    find_challenges_to_settle,
+    lock_expired_challenges,
+    settle_challenge,
+    find_challenges_to_void,
+    void_challenge,
+)
 
 from app.v1.core.logger import get_logger
 
@@ -114,7 +114,11 @@ async def trigger_settle_challenges(db: AsyncSession = Depends(get_db)):
             )
 
     await db.commit()
-    logger.info("Challenge settlement completed. Settled: %s, Locked: %s", len(challenges), locked)
+    logger.info(
+        "Challenge settlement completed. Settled: %s, Locked: %s",
+        len(challenges),
+        locked,
+    )
     return {"status": "ok", "settled": len(challenges), "locked": locked}
 
 
