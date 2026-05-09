@@ -2,7 +2,7 @@
 Celery tasks for match syncing and alert dispatch.
 """
 
-import asyncio
+# import asyncio
 from sqlalchemy import text
 from app.v1.tasks.celery_app import celery_app
 from app.v1.tasks.async_task import AsyncTask
