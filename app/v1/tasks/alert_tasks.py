@@ -160,7 +160,7 @@ async def _dispatch_alerts():
                             alert_type,
                             user.email,
                         )
-                        await asyncio.sleep(0.6)  # stay under 2 req/sec
+                       # await asyncio.sleep(0.6)  # stay under 2 req/sec
 
         await db.commit()
 
