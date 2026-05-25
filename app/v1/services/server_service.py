@@ -84,10 +84,14 @@ async def get_membership(
     return result.scalar_one_or_none()
 
 
-async def get_user_servers(db: AsyncSession, user_id: int, page: int = 1, page_size: int = 20):
+async def get_user_servers(
+    db: AsyncSession, user_id: int, page: int = 1, page_size: int = 20
+):
     """Get servers the user is a member of, with membership details for list view."""
     total_result = await db.execute(
-        select(func.count()).select_from(ServerMember).where(ServerMember.user_id == user_id)
+        select(func.count())
+        .select_from(ServerMember)
+        .where(ServerMember.user_id == user_id)
     )
     total = total_result.scalar_one()
 
@@ -135,7 +139,8 @@ async def get_servers(
 
     servers = result.scalars().all()
     logger.info(
-        "[get_servers] user %s fetching servers page %s with page size %s", user_id,
+        "[get_servers] user %s fetching servers page %s with page size %s",
+        user_id,
         page,
         page_size,
     )

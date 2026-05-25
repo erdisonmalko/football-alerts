@@ -65,7 +65,9 @@ async def list_server_challenges(
     server_id: int,
     page: int = Query(default=1, ge=1, description="Page number"),
     page_size: int = Query(default=20, ge=5, le=50, description="Results per page"),
-    status: Optional[str] = Query(default=None, description="Filter by challenge status"),
+    status: Optional[str] = Query(
+        default=None, description="Filter by challenge status"
+    ),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -78,7 +80,13 @@ async def list_server_challenges(
     )
     total_pages = (total + page_size - 1) // page_size if total > 0 else 1
 
-    return PaginatedChallenges(items=items, total=total, page=page, page_size=page_size, total_pages=total_pages)
+    return PaginatedChallenges(
+        items=items,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+    )
 
 
 @router.get("/servers/{server_id}/challenges/{challenge_id}")

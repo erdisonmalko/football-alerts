@@ -618,7 +618,9 @@ async def get_server_challenges(
             .where(ChallengeEntry.challenge_id.in_(challenge_ids))
         )
         for entry, user in entries_result.all():
-            entries_by_challenge.setdefault(entry.challenge_id, []).append((entry, user))
+            entries_by_challenge.setdefault(entry.challenge_id, []).append(
+                (entry, user)
+            )
 
     challenges = []
     for challenge, match in rows:
