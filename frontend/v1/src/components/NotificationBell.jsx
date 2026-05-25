@@ -42,8 +42,8 @@ export default function NotificationBell() {
         getChallengeFeed(),
       ])
 
-      // Join requests for owned servers
-      const ownedServers = servers.filter(s => s.is_owner === true)
+      const serverList = Array.isArray(servers) ? servers : servers?.items || []
+      const ownedServers = serverList.filter(s => s.is_owner === true)
       const nestedRequests = await Promise.all(
         ownedServers.map(async (server) => {
           try {
