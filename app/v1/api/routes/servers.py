@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.v1.core.security import get_current_user
@@ -6,6 +6,8 @@ from app.v1.db.session import get_db
 from app.v1.models.models import User, ServerRole, ServerJoinRequest, JoinRequestStatus
 from app.v1.schemas.schemas import (
     JoinByCodeIn,
+    PaginatedServers,
+    PaginatedMyServers,
     ServerCreate,
     ServerLeaderboard,
     ServerDetailOut,
@@ -16,18 +18,32 @@ from app.v1.schemas.schemas import (
 )
 from app.v1.services import server_service
 from app.v1.core.logger import get_logger
+import math
 
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/servers", tags=["servers"], redirect_slashes=False)
 
 
-@router.get("/", response_model=list[ServerPublicOut])
+@router.get("/", response_model=PaginatedServers)
 async def list_servers(
+    page: int = Query(default=1, ge=1, description="Page number"),
+    page_size: int = Query(default=20, ge=5, le=50, description="Results per page"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return await server_service.get_servers(db, current_user.id)
+    servers, total = await server_service.get_servers(
+        db, current_user.id, page=page, page_size=page_size
+    )
+    total_pages = math.ceil(total / page_size) if total > 0 else 1
+
+    return PaginatedServers(
+        items=servers,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+    )
 
 
 # make this only for public servers
@@ -167,12 +183,25 @@ async def create_server(
     }
 
 
-@router.get("/my-servers", response_model=list[ServerListOut])
+@router.get("/my-servers", response_model=PaginatedMyServers)
 async def list_my_servers(
+    page: int = Query(default=1, ge=1, description="Page number"),
+    page_size: int = Query(default=15, ge=5, le=50, description="Results per page"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return await server_service.get_user_servers(db, current_user.id)
+    servers, total = await server_service.get_user_servers(
+        db, current_user.id, page=page, page_size=page_size
+    )
+    total_pages = math.ceil(total / page_size) if total > 0 else 1
+
+    return PaginatedMyServers(
+        items=servers,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+    )
 
 
 @router.get("/{server_id}", response_model=ServerDetailOut)

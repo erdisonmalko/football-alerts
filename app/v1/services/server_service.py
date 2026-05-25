@@ -84,38 +84,62 @@ async def get_membership(
     return result.scalar_one_or_none()
 
 
-async def get_user_servers(db: AsyncSession, user_id: int):
-    """Get all servers the user is a member of, with membership details for list view."""
+async def get_user_servers(db: AsyncSession, user_id: int, page: int = 1, page_size: int = 20):
+    """Get servers the user is a member of, with membership details for list view."""
+    total_result = await db.execute(
+        select(func.count()).select_from(ServerMember).where(ServerMember.user_id == user_id)
+    )
+    total = total_result.scalar_one()
+
     result = await db.execute(
         select(ServerMember, Server)
         .join(Server, Server.id == ServerMember.server_id)
         .where(ServerMember.user_id == user_id)
         .order_by(Server.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
     )
 
     rows = result.all()
 
-    return [
+    items = [
         await ServerMapper.to_list_out(db, server, membership)
         for membership, server in rows
     ]
+    return items, total
 
 
-async def get_servers(db: AsyncSession, user_id: int):
-    """Get all servers for discovery.
+async def get_servers(
+    db: AsyncSession,
+    user_id: int,
+    page: int = 1,
+    page_size: int = 20,
+):
+    """Get servers for discovery with optional pagination.
     For each server, include whether the user is a member and their points/rank if so."""
     # Subquery: servers where user is already a member
     member_subq = select(ServerMember.server_id).where(ServerMember.user_id == user_id)
 
+    total_result = await db.execute(
+        select(func.count()).select_from(Server).where(~Server.id.in_(member_subq))
+    )
+    total = total_result.scalar_one()
+
     result = await db.execute(
         select(Server)
-        .where(~Server.id.in_(member_subq))  # Exclude servers where user is a member
+        .where(~Server.id.in_(member_subq))
         .order_by(Server.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
     )
 
     servers = result.scalars().all()
-
-    return [await ServerMapper.to_discover_out(db, s, user_id) for s in servers]
+    logger.info(
+        "[get_servers] user %s fetching servers page %s with page size %s", user_id,
+        page,
+        page_size,
+    )
+    return [await ServerMapper.to_discover_out(db, s, user_id) for s in servers], total
 
 
 async def get_server_members(

@@ -1,7 +1,8 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import Pagination from './Pagination'
 import styles from './ServerChallenges.module.css'
 import ChallengeCard from './ChallengeCard'
+import { getServerChallenges } from '../api/endpoints'
 
 const ITEMS_PER_PAGE = 6
 const STATUS_TABS = [
@@ -11,44 +12,44 @@ const STATUS_TABS = [
   { key: 'locked', label: 'LOCKED' },
 ]
 
-export default function ServerChallenges({ challenges = [], onRefresh }) {
+export default function ServerChallenges({ serverId, onRefresh }) {
   const [activeTab, setActiveTab] = useState('open')
   const [pageByTab, setPageByTab] = useState({ open: 1, pending: 1, settled: 1, locked: 1 })
+  const [dataByTab, setDataByTab] = useState({})
+  const [loadingByTab, setLoadingByTab] = useState({})
 
-  const tabCounts = useMemo(() => {
-    return challenges.reduce(
-      (counts, challenge) => {
-        if (STATUS_TABS.some(tab => tab.key === challenge.status)) {
-          counts[challenge.status] = (counts[challenge.status] || 0) + 1
-        }
-        return counts
-      },
-      { open: 0, pending: 0, settled: 0, locked: 0 }
-    )
-  }, [challenges])
-
-  const filteredChallenges = useMemo(
-    () => challenges.filter(challenge => challenge.status === activeTab),
-    [challenges, activeTab]
-  )
-
-  const totalPages = Math.max(1, Math.ceil(filteredChallenges.length / ITEMS_PER_PAGE))
   const currentPage = pageByTab[activeTab] || 1
-  const visibleChallenges = useMemo(
-    () => filteredChallenges.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE),
-    [filteredChallenges, currentPage]
-  )
+  const tabData = dataByTab[activeTab] || { items: [], total: 0, page: 1, page_size: ITEMS_PER_PAGE, total_pages: 1 }
 
   useEffect(() => {
-    if (currentPage > totalPages) {
-      setPageByTab(prev => ({ ...prev, [activeTab]: totalPages }))
+    let mounted = true
+    const fetch = async () => {
+      setLoadingByTab(prev => ({ ...prev, [activeTab]: true }))
+      try {
+        const res = await getServerChallenges(serverId, { page: currentPage, pageSize: ITEMS_PER_PAGE, status: activeTab })
+        if (!mounted) return
+        setDataByTab(prev => ({ ...prev, [activeTab]: res }))
+      } catch (err) {
+        console.error('Failed to fetch server challenges:', err)
+      } finally {
+        setLoadingByTab(prev => ({ ...prev, [activeTab]: false }))
+      }
     }
-  }, [activeTab, currentPage, totalPages])
+
+    fetch()
+    return () => { mounted = false }
+  }, [serverId, activeTab, currentPage])
 
   const handleTabChange = (tabKey) => {
     setActiveTab(tabKey)
     setPageByTab(prev => ({ ...prev, [tabKey]: prev[tabKey] || 1 }))
   }
+
+  const handlePageChange = (nextPage) => {
+    setPageByTab(prev => ({ ...prev, [activeTab]: nextPage }))
+  }
+
+  const { items, total_pages: totalPages } = tabData
 
   return (
     <div className={styles.challengesSection}>
@@ -63,16 +64,18 @@ export default function ServerChallenges({ challenges = [], onRefresh }) {
               onClick={() => handleTabChange(tab.key)}
             >
               {tab.label}
-              <span className={styles.tabCount}> {tabCounts[tab.key]}</span>
+              <span className={styles.tabCount}> { (dataByTab[tab.key] && dataByTab[tab.key].total) || 0 }</span>
             </button>
           ))}
         </div>
       </div>
 
-      {filteredChallenges.length > 0 ? (
+      {loadingByTab[activeTab] ? (
+        <p className={styles.emptyText}>Loading…</p>
+      ) : items && items.length > 0 ? (
         <>
           <div className={styles.challengesList}>
-            {visibleChallenges.map(challenge => (
+            {items.map(challenge => (
               <ChallengeCard
                 key={challenge.id}
                 challenge={challenge}
@@ -85,7 +88,7 @@ export default function ServerChallenges({ challenges = [], onRefresh }) {
           <Pagination
             page={currentPage}
             totalPages={totalPages}
-            onChange={(nextPage) => setPageByTab(prev => ({ ...prev, [activeTab]: nextPage }))}
+            onChange={handlePageChange}
           />
         </>
       ) : (

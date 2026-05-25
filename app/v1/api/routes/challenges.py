@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.v1.core.security import get_current_user
 from app.v1.db.session import get_db
 from app.v1.models.models import User
-from app.v1.schemas.schemas import ChallengeAccept, ChallengeCreate
+from app.v1.schemas.schemas import ChallengeAccept, ChallengeCreate, PaginatedChallenges
+from fastapi import Query
 from app.v1.services import challenge_service, server_service
 from app.v1.core.logger import get_logger
 
@@ -58,9 +60,12 @@ async def create_challenge(
     return {"id": challenge.id, "status": challenge.status}
 
 
-@router.get("/servers/{server_id}/challenges")
+@router.get("/servers/{server_id}/challenges", response_model=PaginatedChallenges)
 async def list_server_challenges(
     server_id: int,
+    page: int = Query(default=1, ge=1, description="Page number"),
+    page_size: int = Query(default=20, ge=5, le=50, description="Results per page"),
+    status: Optional[str] = Query(default=None, description="Filter by challenge status"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -68,7 +73,12 @@ async def list_server_challenges(
     if not membership:
         raise HTTPException(status_code=403, detail="Not a member of this server")
 
-    return await challenge_service.get_server_challenges(db, server_id, current_user.id)
+    items, total = await challenge_service.get_server_challenges(
+        db, server_id, current_user.id, page=page, page_size=page_size, status=status
+    )
+    total_pages = (total + page_size - 1) // page_size if total > 0 else 1
+
+    return PaginatedChallenges(items=items, total=total, page=page, page_size=page_size, total_pages=total_pages)
 
 
 @router.get("/servers/{server_id}/challenges/{challenge_id}")
@@ -88,8 +98,10 @@ async def get_challenge(
             status_code=404, detail="Challenge not found or not invited"
         )
 
-    challenges = await challenge_service.get_server_challenges(db, server_id)
-    match = next((c for c in challenges if c["id"] == challenge_id), None)
+    items, _ = await challenge_service.get_server_challenges(
+        db, server_id, current_user.id, page=1, page_size=1000
+    )
+    match = next((c for c in items if c["id"] == challenge_id), None)
     if not match:
         raise HTTPException(status_code=404, detail="Challenge not found")
 

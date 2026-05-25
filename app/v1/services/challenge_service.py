@@ -2,7 +2,7 @@ import re
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.v1.models.models import (
@@ -542,23 +542,87 @@ async def get_server_challenges(
     db: AsyncSession,
     server_id: int,
     user_id: int,
-) -> list[dict]:
-    result = await db.execute(
-        select(Challenge, Match)
-        .join(Match, Match.id == Challenge.match_id)
-        .where(Challenge.server_id == server_id)
-        .order_by(Challenge.created_at.desc())
-    )
+    page: int = 1,
+    page_size: int = 20,
+    status: Optional[str] = None,
+) -> tuple[list[dict], int]:
+    """Return paginated challenges for a server along with total count.
+
+    This implements batching for entries to avoid N+1 queries.
+    Returns (items, total)
+    """
+    # total count and selection
+    status_lc = status.lower() if status else None
+
+    # Special case: 'pending' refers to entry status for the current user
+    if status_lc == "pending":
+        total_result = await db.execute(
+            select(func.count())
+            .select_from(Challenge)
+            .join(ChallengeEntry, ChallengeEntry.challenge_id == Challenge.id)
+            .where(
+                Challenge.server_id == server_id,
+                ChallengeEntry.user_id == user_id,
+                ChallengeEntry.status == ChallengeEntryStatus.PENDING,
+            )
+        )
+        total = total_result.scalar_one()
+
+        result = await db.execute(
+            select(Challenge, Match)
+            .join(Match, Match.id == Challenge.match_id)
+            .join(ChallengeEntry, ChallengeEntry.challenge_id == Challenge.id)
+            .where(
+                Challenge.server_id == server_id,
+                ChallengeEntry.user_id == user_id,
+                ChallengeEntry.status == ChallengeEntryStatus.PENDING,
+            )
+            .order_by(Challenge.created_at.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+    else:
+        # Map to ChallengeStatus enum when filtering by challenge status
+        stmt_where = [Challenge.server_id == server_id]
+        if status_lc:
+            try:
+                cs = ChallengeStatus(status_lc)
+                stmt_where.append(Challenge.status == cs)
+            except Exception:
+                # unknown status — return empty
+                return [], 0
+
+        total_result = await db.execute(
+            select(func.count()).select_from(Challenge).where(*stmt_where)
+        )
+        total = total_result.scalar_one()
+
+        result = await db.execute(
+            select(Challenge, Match)
+            .join(Match, Match.id == Challenge.match_id)
+            .where(*stmt_where)
+            .order_by(Challenge.created_at.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
     rows = result.all()
 
-    challenges = []
-    for challenge, match in rows:
+    # Collect challenge ids
+    challenge_ids = [c.id for c, _ in rows]
+
+    entries_by_challenge: dict[int, list[tuple[ChallengeEntry, User]]] = {}
+    if challenge_ids:
         entries_result = await db.execute(
             select(ChallengeEntry, User)
             .join(User, User.id == ChallengeEntry.user_id)
-            .where(ChallengeEntry.challenge_id == challenge.id)
+            .where(ChallengeEntry.challenge_id.in_(challenge_ids))
         )
-        entry_rows = entries_result.all()
+        for entry, user in entries_result.all():
+            entries_by_challenge.setdefault(entry.challenge_id, []).append((entry, user))
+
+    challenges = []
+    for challenge, match in rows:
+        entry_rows = entries_by_challenge.get(challenge.id, [])
 
         item = _build_challenge_item(
             challenge,
@@ -581,7 +645,7 @@ async def get_server_challenges(
         ]
         challenges.append(item)
 
-    return challenges
+    return challenges, total
 
 
 def _build_challenge_item(

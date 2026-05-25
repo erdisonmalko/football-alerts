@@ -43,7 +43,7 @@ export const updateProfile = (data) =>
 export const deleteAccount = () =>
   api.delete('/users/me')
 
-// Upcoming matches (browse)
+// Upcoming matches (browse) - change the query string to static page and page number
 export const getUpcomingMatches = (queryString = '') =>
   api.get(`/football/matches/upcoming${queryString}`).then(r => r.data)
 
@@ -79,11 +79,11 @@ export const disconnectGoogle = () =>
   api.delete('/auth/google/disconnect')
 
 // Servers
-export const getMyServers = () =>
-  api.get('/servers/my-servers').then(r => r.data)
+export const getMyServers = ({ page = 1, pageSize = 15 } = {}) =>
+  api.get(`/servers/my-servers?page=${page}&page_size=${pageSize}`).then(r => r.data)
 
-export const getPublicServers = () =>
-  api.get('/servers/').then(r => r.data)
+export const getPublicServers = ({ page = 1, pageSize = 15 } = {}) =>
+  api.get(`/servers/?page=${page}&page_size=${pageSize}`).then(r => r.data)
 
 export const requestToJoin = (serverId) =>
   api.post(`/servers/${serverId}/request-join`).then(r => r.data)
@@ -124,11 +124,29 @@ export const getServerLeaderboard = (serverId) =>
 
 // Challenges - they go through the server because they are server-specific, 
 // and we want to show them in the server feed
+const pendingRequests = new Map()
+
+const dedupeGet = (url) => {
+  if (pendingRequests.has(url)) {
+    return pendingRequests.get(url)
+  }
+
+  const request = api
+    .get(url)
+    .then((r) => r.data)
+    .finally(() => pendingRequests.delete(url))
+
+  pendingRequests.set(url, request)
+  return request
+}
+
 export const getChallengeFeed = () =>
   api.get('/challenges/feed').then(r => r.data)
 
-export const getServerChallenges = (serverId) =>
-  api.get(`/servers/${serverId}/challenges`).then(r => r.data)
+export const getServerChallenges = (serverId, { page = 1, pageSize = 15, status = null } = {}) => {
+  const url = `/servers/${serverId}/challenges?page=${page}&page_size=${pageSize}${status ? `&status=${status}` : ''}`
+  return dedupeGet(url)
+}
 
 export const createChallenge = (serverId, payload) =>
   api.post(`/servers/${serverId}/challenges`, payload).then(r => r.data)

@@ -227,6 +227,22 @@ class ServerPublicOut(ServerBaseOut):
     has_pending_request: bool
 
 
+class PaginatedServers(BaseModel):
+    items: list[ServerPublicOut]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
+class PaginatedMyServers(BaseModel):
+    items: list[ServerListOut]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
 class ServerDetailOut(BaseModel):
     id: int
     name: str
@@ -307,6 +323,14 @@ class ChallengeWithMatch(ChallengeOut):
     """Used in list views — embeds match details so the UI doesn't need a second call."""
 
     match: MatchOut
+
+
+class PaginatedChallenges(BaseModel):
+    items: list[ChallengeWithMatch]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
 
 
 class ChallengeAccept(BaseModel):
