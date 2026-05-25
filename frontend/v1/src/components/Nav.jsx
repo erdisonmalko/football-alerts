@@ -4,12 +4,15 @@ import { useAuth } from '../context/AuthContext'
 
 import styles from './Nav.module.css'
 import NotificationBell from './NotificationBell'
+import ConfirmationDialog from './ConfirmationDialog'
 
 export default function Nav() {
   const { user, signIn, signOut } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
+  const [confirmSignOut, setConfirmSignOut] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
   const dropdownRef = useRef(null)
 
 
@@ -24,8 +27,15 @@ export default function Nav() {
   }, [])
 
   const handleSignOut = async () => {
-    await signOut()
-    navigate('/login')
+    setSigningOut(true)
+    setOpen(false)
+    try {
+      await signOut()
+      navigate('/login')
+    } finally {
+      setSigningOut(false)
+      setConfirmSignOut(false)
+    }
   }
 
 
@@ -83,12 +93,24 @@ export default function Nav() {
 
             <div className={styles.dropDivider} />
 
-            <button className={styles.dropAction} onClick={handleSignOut}>
+            <button className={styles.dropAction} onClick={() => setConfirmSignOut(true)}>
               SIGN OUT
             </button>
           </div>
         )}
       </div>
+
+      <ConfirmationDialog
+        isOpen={confirmSignOut}
+        title="Sign out"
+        description="Are you sure you want to sign out? You will need to log in again to continue." 
+        confirmLabel={signingOut ? 'Signing out...' : 'Sign out'}
+        cancelLabel="Cancel"
+        confirmVariant="danger"
+        isLoading={signingOut}
+        onConfirm={handleSignOut}
+        onCancel={() => setConfirmSignOut(false)}
+      />
     </nav>
   )
 }
