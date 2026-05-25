@@ -4,17 +4,17 @@ import { useNavigate } from 'react-router-dom'
 import ServerLeaderboard from './ServerLeaderboard'
 import ServerChallenges from './ServerChallenges'
 import CreateChallenge from './CreateChallenge'
+import ConfirmationDialog from './ConfirmationDialog'
 import styles from './ServerDetails.module.css'
 import { regenerateInviteCode } from '../api/endpoints'
 
 export default function ServerDetail({
   serverDetails,
   leaderboard,
-  challenges,
+  onRefresh,
   onBack,
   onLeave,
   onUpdate,
-  onRefresh,
 }) {
   const [isEditing, setIsEditing] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -206,7 +206,7 @@ export default function ServerDetail({
       >
         + CHALLENGE
       </button>
-      <ServerChallenges challenges={challenges} />
+      <ServerChallenges serverId={serverDetails.id} onRefresh={onRefresh} />
       
       {showCreateChallenge && (
         <CreateChallenge
@@ -220,44 +220,17 @@ export default function ServerDetail({
         />
       )}
 
-      {showLeaveConfirm && (
-          <div className={styles.overlay} onClick={() => setShowLeaveConfirm(false)}>
-            <div
-              className={styles.modal}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h3 className={styles.title}>Leave Server</h3>
-
-              <p className={styles.subtitle}>
-                This action is irreversible. You will lose access to this server,
-                including its challenges, leaderboard, and members.
-              </p>
-
-              <p className={styles.subtitle}>
-                You will need a new invite to join again.
-              </p>
-
-              <div className={styles.actions}>
-                <button
-                  className={styles.secondary}
-                  onClick={() => setShowLeaveConfirm(false)}
-                  disabled={leaving}
-                >
-                  Cancel
-                </button>
-
-                <button
-                  className={styles.primary}
-                  onClick={confirmLeave}
-                  disabled={leaving}
-                  style={{ background: '#ff4d4d', color: 'white' }}
-                >
-                  {leaving ? 'Leaving...' : 'Leave Server'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+      <ConfirmationDialog
+        isOpen={showLeaveConfirm}
+        title="Leave Server"
+        description="This action is irreversible. You will lose access to this server, including its challenges, leaderboard, and members. You will need a new invite to join again."
+        confirmLabel={leaving ? 'Leaving...' : 'Leave Server'}
+        cancelLabel="Cancel"
+        isLoading={leaving}
+        confirmVariant="danger"
+        onConfirm={confirmLeave}
+        onCancel={() => setShowLeaveConfirm(false)}
+      />
     </div>
   )
 }

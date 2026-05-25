@@ -1,0 +1,39 @@
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.2rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.success {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.2);
+  color: #166534;
+}
+
+.error {
+  background: rgba(242, 38, 19, 0.12);
+  border-color: rgba(242, 38, 19, 0.2);
+  color: #991b1b;
+}
+
+.message {
+  margin: 0;
+  flex: 1;
+}
+
+.closeButton {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}

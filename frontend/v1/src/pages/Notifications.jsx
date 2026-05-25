@@ -13,6 +13,7 @@ import {
   acceptChallenge,
   declineChallenge,
 } from '../api/endpoints'
+import { parseApiError } from '../api/errorHandler'
 
 const ITEMS_PER_PAGE = 6
 
@@ -23,6 +24,7 @@ export default function Notifications() {
   const [loading, setLoading] = useState(true)
   const [acting, setActing] = useState(null)
   const [prediction, setPrediction] = useState({})
+  const [challengeError, setChallengeError] = useState({})
   const [responded, setResponded] = useState({})
   const [page, setPage] = useState(1)
 
@@ -36,7 +38,8 @@ export default function Notifications() {
         getChallengeFeed(),
       ])
 
-      const ownedServers = servers.filter(s => s.is_owner === true)
+      const serverList = Array.isArray(servers) ? servers : servers?.items || []
+      const ownedServers = serverList.filter(s => s.is_owner === true)
       const nestedRequests = await Promise.all(
         ownedServers.map(async (server) => {
           try {
@@ -96,7 +99,10 @@ export default function Notifications() {
     try {
       await acceptChallenge(challenge.server_id, challenge.id, pred)
       setResponded(prev => ({ ...prev, [challenge.id]: 'accepted' }))
+      setChallengeError(prev => ({ ...prev, [challenge.id]: undefined }))
     } catch (err) {
+      const message = parseApiError(err)
+      setChallengeError(prev => ({ ...prev, [challenge.id]: message }))
       console.error('Failed to accept challenge:', err)
     } finally {
       setActing(null)
@@ -108,7 +114,10 @@ export default function Notifications() {
     try {
       await declineChallenge(challenge.server_id, challenge.id)
       setResponded(prev => ({ ...prev, [challenge.id]: 'declined' }))
+      setChallengeError(prev => ({ ...prev, [challenge.id]: undefined }))
     } catch (err) {
+      const message = parseApiError(err)
+      setChallengeError(prev => ({ ...prev, [challenge.id]: message }))
       console.error('Failed to decline challenge:', err)
     } finally {
       setActing(null)
@@ -249,6 +258,9 @@ export default function Notifications() {
                           />
                           {prediction[`${item.challenge.id}_error`] && (
                             <span className={bellStyles.predError}>Enter prediction</span>
+                          )}
+                          {challengeError[item.challenge.id] && (
+                            <span className={bellStyles.predError}>{challengeError[item.challenge.id]}</span>
                           )}
                           <div className={`${bellStyles.itemActions} ${styles.notificationActions}`}>
                             <button

@@ -17,24 +17,19 @@ export default function ServerPage() {
 
   const [serverDetails, setServerDetails] = useState(null)
   const [leaderboard, setLeaderboard] = useState(null)
-  const [challenges, setChallenges] = useState([])
   const [loading, setLoading] = useState(true)
 
   const fetchAll = useCallback(async () => {
     setLoading(true)
 
     try {
-      const [details, leader, chal] = await Promise.all([
+      const [details, leader] = await Promise.all([
         getServer(id),
         getServerLeaderboard(id),
-        getServerChallenges(id),
       ])
-      
-      console.log('[ServerPage] Challenges fetched:', chal)
 
       setServerDetails(details)
       setLeaderboard(leader)
-      setChallenges(chal || [])
     } catch (err) {
       console.error('Failed to fetch server page:', err)
     } finally {
@@ -98,7 +93,6 @@ export default function ServerPage() {
         <ServerDetail
           serverDetails={serverDetails}
           leaderboard={leaderboard}
-          challenges={challenges}
           onUpdate={handleUpdate}
           onLeave={handleLeave}
           onRefresh={fetchAll}

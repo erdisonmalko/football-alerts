@@ -1,59 +1,25 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { 
-  updateProfile, 
-  deleteAccount, 
-  getGoogleStatus, 
-  connectGoogle, 
-  disconnectGoogle 
-} from '../api/endpoints'
 
 import styles from './Nav.module.css'
 import NotificationBell from './NotificationBell'
+import ConfirmationDialog from './ConfirmationDialog'
 
 export default function Nav() {
   const { user, signIn, signOut } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
-  const [editing, setEditing] = useState(false)
-  const [name, setName] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(false)
-  const [deleting, setDeleting] = useState(false)
-  const [googleConnected, setGoogleConnected] = useState(false)
-  const [googleLoading, setGoogleLoading] = useState(false)
+  const [confirmSignOut, setConfirmSignOut] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
   const dropdownRef = useRef(null)
 
-  // Check Google status when dropdown opens
-  useEffect(() => {
-    if (open) {
-      getGoogleStatus()
-        .then(data => setGoogleConnected(data.connected))
-        .catch(() => {})
-    }
-  }, [open])
-
-  // Handle redirect back from Google OAuth
-  useEffect(() => {
-    const params = new URLSearchParams(location.search)
-    const googleParam = params.get('google')
-    if (googleParam === 'connected') {
-      setGoogleConnected(true)
-      // Clean up URL
-      navigate(location.pathname, { replace: true })
-    } else if (googleParam === 'error') {
-      navigate(location.pathname, { replace: true })
-    }
-  }, [location, navigate])
 
   useEffect(() => {
     const handler = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setOpen(false)
-        setEditing(false)
-        setConfirmDelete(false)
       }
     }
     document.addEventListener('mousedown', handler)
@@ -61,53 +27,17 @@ export default function Nav() {
   }, [])
 
   const handleSignOut = async () => {
-    await signOut()
-    navigate('/login')
-  }
-
-  const handleEditOpen = () => {
-    setName(user?.full_name || '')
-    setEditing(true)
-    setConfirmDelete(false)
-  }
-
-  const handleSave = async () => {
-    setSaving(true)
+    setSigningOut(true)
+    setOpen(false)
     try {
-      const updated = await updateProfile({ full_name: name.trim() || null })
-      signIn(updated)
-      setEditing(false)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handleGoogleConnect = () => {
-    connectGoogle() // redirects browser
-  }
-
-  const handleGoogleDisconnect = async () => {
-    setGoogleLoading(true)
-    try {
-      await disconnectGoogle()
-      setGoogleConnected(false)
-    } catch {
-      // ignore
-    } finally {
-      setGoogleLoading(false)
-    }
-  }
-
-  const handleDelete = async () => {
-    setDeleting(true)
-    try {
-      await deleteAccount()
-      signOut()
+      await signOut()
       navigate('/login')
     } finally {
-      setDeleting(false)
+      setSigningOut(false)
+      setConfirmSignOut(false)
     }
   }
+
 
   const isActive = (path) => location.pathname === path
   const displayName = user?.full_name || user?.email || ''
@@ -137,7 +67,7 @@ export default function Nav() {
       <div className={styles.profileWrap} ref={dropdownRef}>
         <button
           className={`${styles.profileBtn} ${open ? styles.profileBtnOpen : ''}`}
-          onClick={() => { setOpen(o => !o); setEditing(false); setConfirmDelete(false) }}
+          onClick={() => setOpen(o => !o)}
         >
           <span className={styles.profileInitial}>
             {displayName.charAt(0).toUpperCase()}
@@ -155,108 +85,32 @@ export default function Nav() {
               </p>
             </div>
 
-            {!confirmDelete && (
-              <div className={styles.dropSection}>
-                {editing ? (
-                  <div className={styles.editRow}>
-                    <input
-                      className={styles.nameInput}
-                      value={name}
-                      onChange={e => setName(e.target.value)}
-                      placeholder="Your name"
-                      maxLength={255}
-                      autoFocus
-                      onKeyDown={e => e.key === 'Enter' && handleSave()}
-                    />
-                    <button className={styles.saveBtn} onClick={handleSave} disabled={saving}>
-                      {saving ? '...' : 'SAVE'}
-                    </button>
-                    <button className={styles.cancelBtn} onClick={() => setEditing(false)}>
-                      X
-                    </button>
-                  </div>
-                ) : (
-                  <button className={styles.dropAction} onClick={handleEditOpen}>
-                    EDIT NAME
-                  </button>
-                )}
-              </div>
-            )}
+            <div className={styles.dropSection}>
+              <Link to="/profile" className={styles.dropAction} onClick={() => setOpen(false)}>
+                PROFILE
+              </Link>
+            </div>
 
             <div className={styles.dropDivider} />
 
-            {/* Google Calendar */}
-            {!confirmDelete && (
-              <>
-                <div className={styles.dropSection}>
-                  <div className={styles.googleRow}>
-                    <div className={styles.googleInfo}>
-                      <span className={styles.googleLabel}>GOOGLE CALENDAR</span>
-                      <span className={`${styles.googleStatus} ${googleConnected ? styles.googleConnected : styles.googleDisconnected}`}>
-                        {googleConnected ? '● CONNECTED' : '○ NOT CONNECTED'}
-                      </span>
-                    </div>
-                    {googleConnected ? (
-                      <button
-                        className={styles.googleBtn}
-                        onClick={handleGoogleDisconnect}
-                        disabled={googleLoading}
-                      >
-                        {googleLoading ? '...' : 'DISCONNECT'}
-                      </button>
-                    ) : (
-                      <button
-                        className={`${styles.googleBtn} ${styles.googleBtnConnect}`}
-                        onClick={handleGoogleConnect}
-                        disabled={googleLoading}
-                      >
-                        CONNECT
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <div className={styles.dropDivider} />
-              </>
-            )}
-
-            {!confirmDelete && (
-              <button className={styles.dropAction} onClick={handleSignOut}>
-                SIGN OUT
-              </button>
-            )}
-
-            {!confirmDelete ? (
-              <button
-                className={`${styles.dropAction} ${styles.dropDanger}`}
-                onClick={() => { setConfirmDelete(true); setEditing(false) }}
-              >
-                DELETE ACCOUNT
-              </button>
-            ) : (
-              <div className={styles.deleteConfirm}>
-                <p className={styles.deleteWarning}>
-                  This will permanently delete your account and all alert subscriptions. This cannot be undone.
-                </p>
-                <div className={styles.deleteActions}>
-                  <button
-                    className={styles.deleteConfirmBtn}
-                    onClick={handleDelete}
-                    disabled={deleting}
-                  >
-                    {deleting ? 'DELETING...' : 'YES, DELETE'}
-                  </button>
-                  <button
-                    className={styles.cancelBtn}
-                    onClick={() => setConfirmDelete(false)}
-                  >
-                    CANCEL
-                  </button>
-                </div>
-              </div>
-            )}
+            <button className={styles.dropAction} onClick={() => setConfirmSignOut(true)}>
+              SIGN OUT
+            </button>
           </div>
         )}
       </div>
+
+      <ConfirmationDialog
+        isOpen={confirmSignOut}
+        title="Sign out"
+        description="Are you sure you want to sign out? You will need to log in again to continue." 
+        confirmLabel={signingOut ? 'Signing out...' : 'Sign out'}
+        cancelLabel="Cancel"
+        confirmVariant="danger"
+        isLoading={signingOut}
+        onConfirm={handleSignOut}
+        onCancel={() => setConfirmSignOut(false)}
+      />
     </nav>
   )
 }

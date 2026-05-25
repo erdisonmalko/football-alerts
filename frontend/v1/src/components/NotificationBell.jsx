@@ -5,6 +5,7 @@ import {
   getJoinRequests, handleJoinRequest,
   getChallengeFeed, acceptChallenge, declineChallenge,
 } from '../api/endpoints'
+import { parseApiError } from '../api/errorHandler'
 import styles from './NotificationBell.module.css'
 
 const POLL_INTERVAL = 60 * 1000
@@ -17,6 +18,7 @@ export default function NotificationBell() {
   const [loading, setLoading] = useState(false)
   const [acting, setActing] = useState(null)
   const [prediction, setPrediction] = useState({}) // { challengeId: value }
+  const [challengeError, setChallengeError] = useState({})
   const [responded, setResponded] = useState({}) // { challengeId: 'accepted'|'declined' }
   const ref = useRef(null)
 
@@ -40,8 +42,8 @@ export default function NotificationBell() {
         getChallengeFeed(),
       ])
 
-      // Join requests for owned servers
-      const ownedServers = servers.filter(s => s.is_owner === true)
+      const serverList = Array.isArray(servers) ? servers : servers?.items || []
+      const ownedServers = serverList.filter(s => s.is_owner === true)
       const nestedRequests = await Promise.all(
         ownedServers.map(async (server) => {
           try {
@@ -114,8 +116,11 @@ export default function NotificationBell() {
     try {
       await acceptChallenge(challenge.server_id, challenge.id, pred)
       setResponded(prev => ({ ...prev, [challenge.id]: 'accepted' }))
+      setChallengeError(prev => ({ ...prev, [challenge.id]: undefined }))
       setCount(c => Math.max(0, c - 1))
     } catch (err) {
+      const message = parseApiError(err)
+      setChallengeError(prev => ({ ...prev, [challenge.id]: message }))
       console.error('Failed to accept challenge:', err)
     } finally {
       setActing(null)
@@ -127,8 +132,11 @@ export default function NotificationBell() {
     try {
       await declineChallenge(challenge.server_id, challenge.id)
       setResponded(prev => ({ ...prev, [challenge.id]: 'declined' }))
+      setChallengeError(prev => ({ ...prev, [challenge.id]: undefined }))
       setCount(c => Math.max(0, c - 1))
     } catch (err) {
+      const message = parseApiError(err)
+      setChallengeError(prev => ({ ...prev, [challenge.id]: message }))
       console.error('Failed to decline challenge:', err)
     } finally {
       setActing(null)
@@ -243,6 +251,9 @@ export default function NotificationBell() {
                           />
                           {prediction[`${challenge.id}_error`] && (
                             <span className={styles.predError}>Enter prediction</span>
+                          )}
+                          {challengeError[challenge.id] && (
+                            <span className={styles.predError}>{challengeError[challenge.id]}</span>
                           )}
                           <div className={styles.itemActions}>
                             <button

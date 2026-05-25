@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import Pagination from './Pagination'
 import styles from '../pages/Dashboard.module.css'
 import JoinPrivateServerModal from './JoinPrivateServerModal'
@@ -6,12 +6,8 @@ import { joinByInvite } from '../api/endpoints'
 
 const SERVERS_PER_PAGE = 15
 
-function MyServers({ servers, onSelectServer, currentPage = 1, onPageChange = () => {} }) {
-  const visibleServers = useMemo(
-    () => servers.slice((currentPage - 1) * SERVERS_PER_PAGE, currentPage * SERVERS_PER_PAGE),
-    [servers, currentPage]
-  )
-  const totalPages = Math.max(1, Math.ceil(servers.length / SERVERS_PER_PAGE))
+function MyServers({ servers, onSelectServer, currentPage = 1, onPageChange = () => {}, totalPages = 1 }) {
+  const visibleServers = servers
 
   if (servers.length === 0) {
     return (
@@ -55,16 +51,11 @@ function MyServers({ servers, onSelectServer, currentPage = 1, onPageChange = ()
 
 
 
-function DiscoverServers({ servers, onRequestJoin, onEnter, currentPage = 1, onPageChange = () => {} }) {
-  const [requesting, setRequesting] = useState(null)
+function DiscoverServers({ servers, onRequestJoin, onEnter, currentPage = 1, onPageChange = () => {}, totalPages = 1 }) {
   const [selectedServer, setSelectedServer] = useState(null)
   const [modalOpen, setModalOpen] = useState(false)
 
-  const visibleServers = useMemo(
-    () => servers.slice((currentPage - 1) * SERVERS_PER_PAGE, currentPage * SERVERS_PER_PAGE),
-    [servers, currentPage]
-  )
-  const totalPages = Math.max(1, Math.ceil(servers.length / SERVERS_PER_PAGE))
+  const visibleServers = servers
 
   if (servers.length === 0) {
     return (
@@ -75,13 +66,8 @@ function DiscoverServers({ servers, onRequestJoin, onEnter, currentPage = 1, onP
     )
   }
 
-  const handleRequest = async (serverId) => {
-    setRequesting(serverId)
-    try {
-      await onRequestJoin(serverId)
-    } finally {
-      setRequesting(null)
-    }
+  const handleRequest = (server) => {
+    onRequestJoin(server)
   }
 
   const handleJoinPrivate = (server) => {
@@ -133,16 +119,11 @@ function DiscoverServers({ servers, onRequestJoin, onEnter, currentPage = 1, onP
                   className={styles.serverActionBtn}
                   onClick={() =>
                     server.is_public
-                      ? handleRequest(server.id)
+                      ? handleRequest(server)
                       : handleJoinPrivate(server)
                   }
-                  disabled={requesting === server.id}
                 >
-                  {requesting === server.id
-                    ? '...'
-                    : server.is_public
-                      ? 'JOIN'
-                      : 'ENTER CODE'}
+                  {server.is_public ? 'JOIN' : 'ENTER CODE'}
                 </button>
               )}
 
@@ -177,7 +158,8 @@ export default function ServersList({
   publicLoading,
   onSelectServer,
   onRequestJoin,
-  onLeaveServer
+  onLeaveServer,
+  onPageChange = () => {},
 }) {
   const [subTab, setSubTab] = useState('mine')
   const [pageByTab, setPageByTab] = useState({ mine: 1, discover: 1 })
@@ -185,6 +167,7 @@ export default function ServersList({
   const currentPage = pageByTab[subTab] || 1
   const handlePageChange = (nextPage) => {
     setPageByTab(prev => ({ ...prev, [subTab]: nextPage }))
+    onPageChange(nextPage, subTab)
   }
 
   if (loading) {
@@ -215,7 +198,8 @@ export default function ServersList({
 
       {subTab === 'mine' ? (
         <MyServers
-          servers={servers}
+          servers={servers?.items || []}
+          totalPages={servers?.total_pages || 1}
           onSelectServer={onSelectServer}
           currentPage={currentPage}
           onPageChange={handlePageChange}
@@ -224,7 +208,8 @@ export default function ServersList({
         <div className={styles.loading}><div className={styles.loadingBar} /></div>
       ) : (
         <DiscoverServers
-          servers={publicServers}
+          servers={publicServers?.items || []}
+          totalPages={publicServers?.total_pages || 1}
           onRequestJoin={onRequestJoin}
           onEnter={onSelectServer}
           currentPage={currentPage}

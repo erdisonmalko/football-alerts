@@ -501,15 +501,6 @@
   font-size: 1rem;
 }
 
-.playerName {
-  color: var(--text);
-  font-weight: 600;
-}
-
-.stats {
-  color: var(--text-4);
-  font-size: 0.85rem;
-}
 
 .points {
   font-family: var(--font-display);
