@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Pagination from './Pagination'
 import styles from '../pages/Dashboard.module.css'
+import chipStyles from './FilterChips.module.css'
 import JoinPrivateServerModal from './JoinPrivateServerModal'
 import { joinByInvite } from '../api/endpoints'
 
@@ -162,6 +163,7 @@ export default function ServersList({
   onPageChange = () => {},
 }) {
   const [subTab, setSubTab] = useState('mine')
+  const [myFilter, setMyFilter] = useState('all') // 'all' | 'owner' | 'member'
   const [pageByTab, setPageByTab] = useState({ mine: 1, discover: 1 })
 
   const currentPage = pageByTab[subTab] || 1
@@ -169,6 +171,14 @@ export default function ServersList({
     setPageByTab(prev => ({ ...prev, [subTab]: nextPage }))
     onPageChange(nextPage, subTab)
   }
+
+  const myItems = servers?.items || []
+  const filteredMyItems = myItems.filter(s => {
+    if (myFilter === 'all') return true
+    if (myFilter === 'owner') return !!s.is_owner
+    return !s.is_owner
+  })
+  const mineBadgeCount = filteredMyItems.length
 
   if (loading) {
     return <div className={styles.loading}><div className={styles.loadingBar} /></div>
@@ -182,9 +192,9 @@ export default function ServersList({
           onClick={() => setSubTab('mine')}
         >
           MY SERVERS
-          {servers.length > 0 && (
+          {(mineBadgeCount > 0) && (
             <span className={`${styles.tabBadge} ${subTab === 'mine' ? styles.tabBadgeActive : ''}`}>
-              {servers.length}
+              {mineBadgeCount}
             </span>
           )}
         </button>
@@ -196,9 +206,33 @@ export default function ServersList({
         </button>
       </div>
 
+      {/* My servers filter controls */}
+      {subTab === 'mine' && (
+        <div style={{ display: 'flex', gap: '0.4rem', margin: '0.75rem 0 1rem' }}>
+          <button
+            className={`${chipStyles.chip} ${myFilter === 'all' ? chipStyles.chipActive : ''}`}
+            onClick={() => setMyFilter('all')}
+          >
+            {myFilter === 'all' && <span className={chipStyles.chipCheck}>✓</span>} All
+          </button>
+          <button
+            className={`${chipStyles.chip} ${myFilter === 'owner' ? chipStyles.chipActive : ''}`}
+            onClick={() => setMyFilter('owner')}
+          >
+            {myFilter === 'owner' && <span className={chipStyles.chipCheck}>✓</span>} Owner
+          </button>
+          <button
+            className={`${chipStyles.chip} ${myFilter === 'member' ? chipStyles.chipActive : ''}`}
+            onClick={() => setMyFilter('member')}
+          >
+            {myFilter === 'member' && <span className={chipStyles.chipCheck}>✓</span>} Member
+          </button>
+        </div>
+      )}
+
       {subTab === 'mine' ? (
         <MyServers
-          servers={servers?.items || []}
+          servers={filteredMyItems}
           totalPages={servers?.total_pages || 1}
           onSelectServer={onSelectServer}
           currentPage={currentPage}

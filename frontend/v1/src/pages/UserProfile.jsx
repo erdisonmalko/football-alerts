@@ -11,6 +11,8 @@ import {
   connectGoogle,
   disconnectGoogle,
   deleteAccount,
+  getSubscriptions,
+  getMyServers,
 } from '../api/endpoints'
 import styles from './UserProfile.module.css'
 
@@ -22,6 +24,14 @@ export default function UserProfile() {
   const [googleConnected, setGoogleConnected] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [googleConfirmation, setGoogleConfirmation] = useState(null)
+  const [subscriptionStats, setSubscriptionStats] = useState({
+    total: 0,
+    league: 0,
+    team: 0,
+    match: 0,
+  })
+  const [serverCount, setServerCount] = useState(0)
+  const [statsLoading, setStatsLoading] = useState(true)
   const [feedback, setFeedback] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -39,6 +49,43 @@ export default function UserProfile() {
         if (active) setGoogleConnected(data.connected)
       })
       .catch(() => {})
+
+    const loadProfileStats = async () => {
+      try {
+        const [subscriptions, servers] = await Promise.all([
+          getSubscriptions(),
+          getMyServers({ page: 1, pageSize: 50 }),
+        ])
+
+        if (!active) return
+
+        const counts = subscriptions.reduce((acc, sub) => {
+          acc[sub.subscription_type] = (acc[sub.subscription_type] || 0) + 1
+          return acc
+        }, { league: 0, team: 0, match: 0 })
+
+        setSubscriptionStats({
+          total: subscriptions.length,
+          league: counts.league,
+          team: counts.team,
+          match: counts.match,
+        })
+
+        const totalServers = typeof servers.total === 'number'
+          ? servers.total
+          : Array.isArray(servers)
+            ? servers.length
+            : servers?.items?.length || 0
+        setServerCount(totalServers)
+      } catch (err) {
+        console.error('Failed to load profile stats:', err)
+      } finally {
+        if (active) setStatsLoading(false)
+      }
+    }
+
+    loadProfileStats()
+
     return () => { active = false }
   }, [])
 
@@ -138,6 +185,31 @@ export default function UserProfile() {
         {feedback && (
           <FeedbackBanner type={feedback.type} message={feedback.message} onClose={() => setFeedback(null)} />
         )}
+
+        <section className={styles.card}>
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionTitle}>Account Summary</h2>
+          </div>
+
+          <div className={styles.row}>
+            <span className={styles.label}>Active alerts</span>
+            <span className={styles.value}>
+              {statsLoading ? 'Loading…' : subscriptionStats.total}
+            </span>
+          </div>
+
+          <div className={styles.row}>
+            <span className={styles.label}>Alert types</span>
+            <span className={styles.value}>
+              {statsLoading ? 'Loading…' : `${subscriptionStats.league} league · ${subscriptionStats.team} team · ${subscriptionStats.match} match`}
+            </span>
+          </div>
+
+          <div className={styles.row}>
+            <span className={styles.label}>Servers joined</span>
+            <span className={styles.value}>{statsLoading ? 'Loading…' : serverCount}</span>
+          </div>
+        </section>
 
         <section className={styles.card}>
           <div className={styles.sectionHeader}>
