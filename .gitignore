@@ -1,5 +1,8 @@
 test.py
 google_console/
+
+to-do.md
+
 # ruff
 .ruff_cache/
 pytest_output.txt
