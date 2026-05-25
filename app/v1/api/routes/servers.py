@@ -11,7 +11,7 @@ from app.v1.schemas.schemas import (
     ServerCreate,
     ServerLeaderboard,
     ServerDetailOut,
-    ServerPublicOut,
+    # ServerPublicOut,
     ServerListOut,
     ServerUpdate,
     ServerUpdateOut,
