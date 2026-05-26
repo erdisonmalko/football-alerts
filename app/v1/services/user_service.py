@@ -54,19 +54,30 @@ async def get_user_subscriptions(
     """
     base_where = (Subscription.user_id == user_id,)
     if subscription_type is not None:
-        count_q = select(func.count()).select_from(Subscription).where(
-            Subscription.user_id == user_id,
-            Subscription.subscription_type == subscription_type,
+        count_q = (
+            select(func.count())
+            .select_from(Subscription)
+            .where(
+                Subscription.user_id == user_id,
+                Subscription.subscription_type == subscription_type,
+            )
         )
         data_q = (
             select(Subscription)
-            .where(Subscription.user_id == user_id, Subscription.subscription_type == subscription_type)
+            .where(
+                Subscription.user_id == user_id,
+                Subscription.subscription_type == subscription_type,
+            )
             .order_by(Subscription.created_at.desc())
             .offset((page - 1) * page_size)
             .limit(page_size)
         )
     else:
-        count_q = select(func.count()).select_from(Subscription).where(Subscription.user_id == user_id)
+        count_q = (
+            select(func.count())
+            .select_from(Subscription)
+            .where(Subscription.user_id == user_id)
+        )
         data_q = (
             select(Subscription)
             .where(Subscription.user_id == user_id)
@@ -88,14 +99,20 @@ async def get_user_profile_stats(db: AsyncSession, user_id: int) -> dict:
         .where(Subscription.user_id == user_id)
         .group_by(Subscription.subscription_type)
     )
-    type_counts = {SubscriptionType.LEAGUE.value: 0, SubscriptionType.TEAM.value: 0, SubscriptionType.MATCH.value: 0}
+    type_counts = {
+        SubscriptionType.LEAGUE.value: 0,
+        SubscriptionType.TEAM.value: 0,
+        SubscriptionType.MATCH.value: 0,
+    }
     total = 0
     for subscription_type, count in result.all():
         type_counts[subscription_type] = int(count)
         total += int(count)
 
     server_result = await db.execute(
-        select(func.count()).select_from(ServerMember).where(ServerMember.user_id == user_id)
+        select(func.count())
+        .select_from(ServerMember)
+        .where(ServerMember.user_id == user_id)
     )
     server_count = int(server_result.scalar_one())
 

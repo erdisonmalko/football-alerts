@@ -106,7 +106,6 @@ class UserProfileStatsOut(BaseModel):
     servers_joined: int
 
 
-
 # ── Match ─────────────────────────────────────────────────────────────────────
 
 

@@ -81,7 +81,7 @@ async def get_my_matches(
 
 @router.get("/me/matches/paged", response_model=PaginatedUserMatches)
 async def get_my_matches_paged(
-    section: str = Query('upcoming', regex='^(live|upcoming|finished)$'),
+    section: str = Query("upcoming", regex="^(live|upcoming|finished)$"),
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=50),
     current_user: User = Depends(get_current_user),
@@ -94,7 +94,9 @@ async def get_my_matches_paged(
         page,
         page_size,
     )
-    return await get_user_matches_page(db, current_user.id, section=section, page=page, page_size=page_size)
+    return await get_user_matches_page(
+        db, current_user.id, section=section, page=page, page_size=page_size
+    )
 
 
 # ── Subscriptions ──────────────────────────────────────────────────────────────
@@ -113,11 +115,19 @@ async def list_subscriptions(
         "[list_subscriptions] User %s requested their subscriptions", current_user.email
     )
     items, total = await get_user_subscriptions(
-        db, current_user.id, page=page, page_size=page_size, subscription_type=subscription_type
+        db,
+        current_user.id,
+        page=page,
+        page_size=page_size,
+        subscription_type=subscription_type,
     )
     total_pages = math.ceil(total / page_size) if page_size else 1
     return PaginatedSubscriptions(
-        items=items, total=total, page=page, page_size=page_size, total_pages=total_pages
+        items=items,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
     )
 
 
