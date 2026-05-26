@@ -724,6 +724,209 @@ async def print_summary(db: AsyncSession) -> None:
         except Exception:
             pass
 
+async def seed_matches(db: AsyncSession, count: int = 100) -> list[int]:
+    """
+    Seed fake matches across all leagues and statuses.
+    Returns list of inserted match IDs.
+    """
+    print(f"  → Creating {count} fake matches...")
+
+    # Status distribution — realistic mix
+    STATUS_WEIGHTS = [
+        ("TIMED",      0.45),  # most upcoming matches
+        ("FINISHED",   0.35),  # past results
+        ("IN_PLAY",    0.08),  # currently live
+        ("PAUSED",     0.02),  # half time
+        ("POSTPONED",  0.05),  # postponed
+        ("CANCELLED",  0.05),  # cancelled
+    ]
+    statuses, weights = zip(*STATUS_WEIGHTS)
+
+    MATCH_TEAMS = {
+        "PL":  [
+            ("Arsenal FC",           57,  "Chelsea FC",              61),
+            ("Manchester City FC",   65,  "Liverpool FC",            64),
+            ("Tottenham Hotspur FC", 73,  "Manchester United FC",    66),
+            ("Newcastle United FC",  67,  "Aston Villa FC",          58),
+            ("Brighton & Hove Albion FC", 397, "West Ham United FC", 563),
+            ("Leicester City FC",     338, "Crystal Palace FC",       354),
+            ("Everton FC",           62,  "Leeds United FC",         341),
+            ("Southampton FC",        340, "Wolverhampton Wanderers FC", 39),
+            ("Burnley FC",           328, "Norwich City FC",         76),
+            ("Brentford FC",          402, "Fulham FC",              402),
+            ("West Ham United FC",    563, "Brighton & Hove Albion FC", 397),
+        ],
+        "PD":  [
+            ("Real Madrid CF",       86,  "FC Barcelona",            81),
+            ("Atletico de Madrid",   78,  "Sevilla FC",              559),
+            ("Villarreal CF",        444, "Athletic Club",           77),
+            ("Real Sociedad de Fútbol", 92, "Real Betis Balompié",   90),
+            ("RC Celta de Vigo",     541, "RCD Espanyol de Barcelona", 45),
+            ("Rayo Vallecano de Madrid", 88, "Getafe CF",             86),
+            ("Real Valladolid CF",    93,  "CA Osasuna",             106),
+            ("Elche CF",             542, "Deportivo Alavés",       102),
+            ("RCD Mallorca",         95,  "Real Mallorca",          95),
+            ("Girona FC",            543, "UD Almería",             102),
+        ],
+        "SA":  [
+            ("FC Internazionale Milano", 108, "AC Milan",             98),
+            ("Juventus FC",          109, "AS Roma",                  100),
+            ("SSC Napoli",           113, "Atalanta BC",              102),
+            ("SS Lazio",             110, "ACF Fiorentina",           99),
+            ("AS Roma",              100, "Sampdoria",                101),
+            ("Hellas Verona FC",     109, "Udinese Calcio",           111),
+            ("Bologna FC 1909",     108, "Torino FC",                109),
+            ("Empoli FC",           110, "US Salernitana 1919",      115),
+            ("Spezia Calcio",       107, "Cagliari Calcio",          109),
+            ("US Sassuolo Calcio",   107, "Parma Calcio 1913",        110),
+        ],
+        "BL1": [
+            ("FC Bayern München",    5,   "Borussia Dortmund",        4),
+            ("Bayer 04 Leverkusen",  3,   "RB Leipzig",               721),
+            ("Eintracht Frankfurt",  19,  "VfB Stuttgart",            10),
+            ("1. FC Union Berlin",   64,  "SC Freiburg",              11),
+            ("Borussia Mönchengladbach", 18, "1. FSV Mainz 05",       15),
+            ("VfL Wolfsburg",        20,  "FC Augsburg",             17),
+            ("TSG Hoffenheim",       22,  "Hertha BSC",              23),
+            ("VfL Bochum 1848",     21,  "Arminia Bielefeld",       24),
+            ("SpVgg Greuther Fürth", 769, "SV Darmstadt 98",         25),
+            ("1. FC Köln",          16,  "VfB Stuttgart",             10),
+        ],
+        "FL1": [
+            ("Paris Saint-Germain FC", 524, "Olympique de Marseille", 516),
+            ("Olympique Lyonnais",   523, "Stade Rennais FC 1901",   529),
+            ("AS Monaco FC",        525, "OGC Nice Côte d'Azur",    528),
+            ("Montpellier HSC",     527, "FC Nantes",               518),
+            ("RC Lens",             526, "Stade de Reims",         527),
+            ("FC Metz",             530, "Angers SCO",             531),
+            ("Clermont Foot 63",    532, "ESTAC Troyes",           533),
+            ("FC Lorient",          534, "FC Girondins de Bordeaux", 535),
+            ("Stade Brestois 29",   536, "AS Saint-Étienne",       537),
+            ("FC Toulouse",         538, "Nîmes Olympique",        539),
+        ],
+        "CL":  [
+            ("Real Madrid CF",       86,  "FC Bayern München",        5),
+            ("FC Barcelona",         81,  "Paris Saint-Germain FC",   524),
+            ("FC Internazionale Milano", 108, "Arsenal FC",           57),
+            ("Manchester City FC",   65,  "Borussia Dortmund",        4),
+            ("Juventus FC",          109, "Atletico de Madrid",       78),
+            ("SSC Napoli",           113, "Chelsea FC",              61),
+            ("SS Lazio",             110, "RB Leipzig",               721),
+            ("AS Roma",              100, "Eintracht Frankfurt",     19),
+            ("Villarreal CF",        444, "1. FC Union Berlin",      64),
+            ("Real Sociedad de Fútbol", 92, "Paris Saint-Germain FC",   524),
+        ],
+        "PPL": [
+            ("SL Benfica",           294, "FC Porto",                  503),
+            ("Sporting CP",          498, "SC Braga",                  228),
+        ],
+        "DED": [
+            ("AFC Ajax",             678, "PSV",                       674),
+            ("Feyenoord",            675, "AZ",                        672),
+        ],
+    }
+
+    match_ids = []
+    # Use a high starting external_id to avoid clashing with real matches
+    base_external_id = 9_000_000
+
+    # Check how many seed matches already exist
+    existing_result = await db.execute(
+        text("SELECT COUNT(*) FROM matches WHERE external_id >= :base"),
+        {"base": base_external_id},
+    )
+    existing_count = existing_result.scalar_one()
+    start_idx = existing_count
+
+    for i in range(count):
+        external_id = base_external_id + start_idx + i
+        league_code, league_name, _ = random.choice(LEAGUES)
+        teams = MATCH_TEAMS.get(league_code, MATCH_TEAMS["PL"])
+        home_name, home_id, away_name, away_id = random.choice(teams)
+
+        status = random.choices(statuses, weights=weights, k=1)[0]
+
+        # Kickoff time based on status
+        if status in ("FINISHED", "POSTPONED", "CANCELLED"):
+            kickoff_utc = _past_dt(30)
+        elif status in ("IN_PLAY", "PAUSED"):
+            # Kicked off 0-90 minutes ago
+            kickoff_utc = datetime.now(timezone.utc) - timedelta(
+                minutes=random.randint(0, 90)
+            )
+        else:  # TIMED
+            kickoff_utc = _future_dt(14)
+
+        # Scores for finished/live matches
+        if status == "FINISHED":
+            home_score, away_score = _score()
+        elif status in ("IN_PLAY", "PAUSED"):
+            home_score = random.randint(0, 3)
+            away_score = random.randint(0, 3)
+        else:
+            home_score, away_score = None, None
+
+        matchday = random.randint(1, 38)
+        stage = "REGULAR_SEASON"
+
+        try:
+            result = await db.execute(
+                text("""
+                    INSERT INTO matches (
+                        external_id, league_code, league_name,
+                        home_team_id, home_team_name,
+                        away_team_id, away_team_name,
+                        kickoff_utc, matchday, stage,
+                        status, home_score, away_score
+                    )
+                    VALUES (
+                        :external_id, :league_code, :league_name,
+                        :home_team_id, :home_team_name,
+                        :away_team_id, :away_team_name,
+                        :kickoff_utc, :matchday, :stage,
+                        :status, :home_score, :away_score
+                    )
+                    ON CONFLICT (external_id) DO NOTHING
+                    RETURNING id
+                """),
+                {
+                    "external_id":    external_id,
+                    "league_code":    league_code,
+                    "league_name":    league_name,
+                    "home_team_id":   home_id,
+                    "home_team_name": home_name,
+                    "away_team_id":   away_id,
+                    "away_team_name": away_name,
+                    "kickoff_utc":    kickoff_utc,
+                    "matchday":       matchday,
+                    "stage":          stage,
+                    "status":         status,
+                    "home_score":     home_score,
+                    "away_score":     away_score,
+                },
+            )
+            row = result.fetchone()
+            if row:
+                match_ids.append(row[0])
+        except Exception as e:
+            print(f"Skipped match {external_id}: {e}")
+
+    await db.flush()
+
+    status_breakdown = {}
+    for s in statuses:
+        r = await db.execute(
+            text("SELECT COUNT(*) FROM matches WHERE external_id >= :base AND status = :s"),
+            {"base": base_external_id, "s": s},
+        )
+        n = r.scalar_one()
+        if n:
+            status_breakdown[s] = n
+
+    print(f"     ✓ {len(match_ids)} fake matches created")
+    print(f"       breakdown: {status_breakdown}")
+    return match_ids
+
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 
@@ -798,8 +1001,12 @@ async def main(args: argparse.Namespace) -> None:
                 "  ⚠  No matches in DB. Run admin sync-matches first for realistic data."
             )
             print(
-                "     Continuing without match subscriptions and challenge match refs...\n"
+                "     Continuing with fake match data...\n"
             )
+            # 2. Matches — seed fake ones + pick up any real ones already in DB
+            fake_match_ids = await seed_matches(db, count=100)
+            await db.commit()
+            print(f"     → {len(fake_match_ids)} total matches available for seeding")
 
         # 3. Subscriptions
         await seed_subscriptions(db, user_ids, match_ids)

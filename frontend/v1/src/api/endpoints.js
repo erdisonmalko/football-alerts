@@ -22,9 +22,16 @@ export const logout = () => api.post('/auth/logout')
 
 export const getMe = () => api.get('/auth/me').then(r => r.data)
 
+export const getUserProfileStats = () => api.get('/users/me/profile-stats').then(r => r.data)
+
 // Subscriptions
-export const getSubscriptions = () =>
-  api.get('/users/me/subscriptions').then(r => r.data)
+export const getSubscriptions = ({ page = 1, pageSize = 15, subscriptionType = null } = {}) => {
+  const params = new URLSearchParams()
+  params.append('page', page)
+  params.append('page_size', pageSize)
+  if (subscriptionType) params.append('subscription_type', subscriptionType)
+  return api.get(`/users/me/subscriptions?${params.toString()}`).then(r => r.data)
+}
 
 export const addSubscription = (type, externalId, displayName) =>
   api.post('/users/me/subscriptions', {
@@ -64,6 +71,14 @@ export const removeMatchFromCalendar = (matchId) =>
 // User matches (dashboard — live, upcoming, finished)
 export const getMyMatches = () =>
   api.get('/users/me/matches').then(r => r.data)
+
+export const getMyMatchesPaged = ({ section = 'upcoming', page = 1, pageSize = 10 } = {}) => {
+  const params = new URLSearchParams()
+  params.append('section', section)
+  params.append('page', page)
+  params.append('page_size', pageSize)
+  return api.get(`/users/me/matches/paged?${params.toString()}`).then(r => r.data)
+}
 
 // Google Calendar
 

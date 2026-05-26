@@ -11,8 +11,7 @@ import {
   connectGoogle,
   disconnectGoogle,
   deleteAccount,
-  getSubscriptions,
-  getMyServers,
+  getUserProfileStats,
 } from '../api/endpoints'
 import styles from './UserProfile.module.css'
 
@@ -50,33 +49,24 @@ export default function UserProfile() {
       })
       .catch(() => {})
 
+    const normalizeSubscriptions = (response) => {
+      if (!response) return []
+      if (Array.isArray(response)) return response
+      return response.items || []
+    }
+
     const loadProfileStats = async () => {
       try {
-        const [subscriptions, servers] = await Promise.all([
-          getSubscriptions(),
-          getMyServers({ page: 1, pageSize: 50 }),
-        ])
-
+        const stats = await getUserProfileStats()
         if (!active) return
 
-        const counts = subscriptions.reduce((acc, sub) => {
-          acc[sub.subscription_type] = (acc[sub.subscription_type] || 0) + 1
-          return acc
-        }, { league: 0, team: 0, match: 0 })
-
         setSubscriptionStats({
-          total: subscriptions.length,
-          league: counts.league,
-          team: counts.team,
-          match: counts.match,
+          total: stats.total_alerts,
+          league: stats.league_alerts,
+          team: stats.team_alerts,
+          match: stats.match_alerts,
         })
-
-        const totalServers = typeof servers.total === 'number'
-          ? servers.total
-          : Array.isArray(servers)
-            ? servers.length
-            : servers?.items?.length || 0
-        setServerCount(totalServers)
+        setServerCount(stats.servers_joined)
       } catch (err) {
         console.error('Failed to load profile stats:', err)
       } finally {

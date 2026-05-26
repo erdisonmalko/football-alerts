@@ -43,6 +43,8 @@ const ALERT_TYPE_OPTIONS = [
 
 export default function Subscriptions() {
   const [subscriptions, setSubscriptions] = useState([])
+  const [subsTotalCount, setSubsTotalCount] = useState(0)
+  const [subsTotalPages, setSubsTotalPages] = useState(1)
   const [leagues, setLeagues] = useState([])
   const [teams, setTeams] = useState([])
   const [matches, setMatches] = useState([])
@@ -89,15 +91,26 @@ export default function Subscriptions() {
   }, [])
 
   // On mount: load data + resume any pending calendar sync after OAuth redirect
+  const fetchSubscriptionsPage = async (page = 1) => {
+    const singleType = activeTypeFilter.size === 1 ? Array.from(activeTypeFilter)[0] : null
+    try {
+      const data = await getSubscriptions({ page, pageSize: SUB_PAGE_SIZE, subscriptionType: singleType })
+      setSubscriptions(data.items)
+      setSubsTotalCount(data.total)
+      setSubsTotalPages(data.total_pages)
+    } catch {
+      setError('Failed to load subscriptions')
+    }
+  }
+
   useEffect(() => {
     const init = async () => {
       try {
-        const [subs, lgs] = await Promise.all([
-          getSubscriptions(),
+        const [lgs] = await Promise.all([
           getLeagues(),
           fetchMatches(1),
         ])
-        setSubscriptions(subs)
+        await fetchSubscriptionsPage(1)
         setLeagues(lgs)
 
         // Resume pending calendar sync after Google OAuth redirect
@@ -129,6 +142,12 @@ export default function Subscriptions() {
     init()
   }, [fetchMatches])
 
+  useEffect(() => {
+    // when filters or page change, fetch subscriptions (server-side if single filter)
+    fetchSubscriptionsPage(subPage)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTypeFilter])
+
   const filteredMatches = useMemo(() => {
     if (upcomingLeagueFilter.size === 0) return matches
     return matches.filter(m => upcomingLeagueFilter.has(m.league_code))
@@ -136,14 +155,18 @@ export default function Subscriptions() {
 
   const filteredSubs = useMemo(() => {
     if (activeTypeFilter.size === 0) return subscriptions
+    if (activeTypeFilter.size === 1) return subscriptions
     return subscriptions.filter(s => activeTypeFilter.has(s.subscription_type))
   }, [subscriptions, activeTypeFilter])
 
   const upcomingLeagueOptions = useMemo(() =>
     leagues.map(lg => ({ value: lg.code, label: lg.name })), [leagues])
 
-  const subTotalPages = Math.max(1, Math.ceil(filteredSubs.length / SUB_PAGE_SIZE))
-  const pagedSubs = filteredSubs.slice((subPage - 1) * SUB_PAGE_SIZE, subPage * SUB_PAGE_SIZE)
+  const displayedTotalPages = activeTypeFilter.size <= 1 ? subsTotalPages : Math.max(1, Math.ceil(filteredSubs.length / SUB_PAGE_SIZE))
+  const pagedSubs = useMemo(() => {
+    if (activeTypeFilter.size <= 1) return subscriptions
+    return filteredSubs.slice((subPage - 1) * SUB_PAGE_SIZE, subPage * SUB_PAGE_SIZE)
+  }, [subscriptions, filteredSubs, activeTypeFilter, subPage])
 
   const handleTabChange = (newTab) => {
     setTab(newTab)
@@ -225,6 +248,19 @@ export default function Subscriptions() {
     try {
       await removeSubscription(subId)
       setSubscriptions(s => s.filter(x => x.id !== subId))
+      // if server-paginated and current page is now empty, move back a page and refetch
+      if (activeTypeFilter.size <= 1) {
+        if (subscriptions.length === 1 && subPage > 1) {
+          const newPage = subPage - 1
+          setSubPage(newPage)
+          await fetchSubscriptionsPage(newPage)
+        } else {
+          // refresh current page
+          await fetchSubscriptionsPage(subPage)
+        }
+      } else {
+        if (pagedSubs.length === 1 && subPage > 1) setSubPage(p => p - 1)
+      }
 
       if (sub?.subscription_type === 'match') {
         setMatches(ms => ms.map(m =>
@@ -275,7 +311,7 @@ export default function Subscriptions() {
   const TABS = [
     { key: 'upcoming', label: 'UPCOMING MATCHES' },
     { key: 'leagues', label: 'LEAGUES & TEAMS' },
-    { key: 'active', label: 'YOUR ACTIVE ALERTS', count: subscriptions.length },
+    { key: 'active', label: 'YOUR ACTIVE ALERTS', count: subsTotalCount || subscriptions.length },
   ]
 
   return (
@@ -509,7 +545,7 @@ export default function Subscriptions() {
                         </div>
                       ))}
                     </div>
-                    <Pagination page={subPage} totalPages={subTotalPages} onChange={setSubPage} />
+                    <Pagination page={subPage} totalPages={displayedTotalPages} onChange={async (p) => { setSubPage(p); if (activeTypeFilter.size <= 1) await fetchSubscriptionsPage(p) }} />
                   </>
                 )}
               </div>
