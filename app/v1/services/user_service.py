@@ -52,7 +52,7 @@ async def get_user_subscriptions(
 
     Returns (items, total)
     """
-    base_where = (Subscription.user_id == user_id,)
+    # base_where = (Subscription.user_id == user_id,)
     if subscription_type is not None:
         count_q = (
             select(func.count())
