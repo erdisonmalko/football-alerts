@@ -4,7 +4,7 @@ import Nav from '../components/Nav'
 import FilterChips from '../components/FilterChips'
 import TabContent from '../components/TabContent'
 import styles from './Dashboard.module.css'
-import { getMyMatches } from '../api/endpoints'
+import { getMyMatchesPaged } from '../api/endpoints'
 
 const REFRESH_INTERVAL = 15 * 60 * 1000
 const PAGE_SIZES = { live: 5, upcoming: 20, finished: 10 }
@@ -17,16 +17,26 @@ const TABS = [
 
 export default function Dashboard() {
   const { user } = useAuth()
-  const [matches, setMatches] = useState({ live: [], upcoming: [], finished: [] })
+  const [matches, setMatches] = useState([])
+  const [counts, setCounts] = useState({ live: 0, upcoming: 0, finished: 0 })
   const [loading, setLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState(null)
   const [tab, setTab] = useState('live')
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
   const [leagueFilter, setLeagueFilter] = useState(new Set())
 
-  const fetchMatches = useCallback(async () => {
+  const fetchMatches = useCallback(async (section = 'live', pageNumber = 1) => {
+    setLoading(true)
     try {
-      const data = await getMyMatches()
-      setMatches(data)
+      const data = await getMyMatchesPaged({ section, page: pageNumber, pageSize: PAGE_SIZES[section] })
+      setMatches(data.items)
+      setCounts({
+        live: data.live_count,
+        upcoming: data.upcoming_count,
+        finished: data.finished_count,
+      })
+      setTotalPages(data.total_pages)
       setLastUpdated(new Date())
     } catch (err) {
       console.error('Failed to fetch matches:', err)
@@ -36,14 +46,13 @@ export default function Dashboard() {
   }, [])
 
   useEffect(() => {
-    fetchMatches()
-    const interval = setInterval(fetchMatches, REFRESH_INTERVAL)
+    fetchMatches(tab, page)
+    const interval = setInterval(() => fetchMatches(tab, page), REFRESH_INTERVAL)
     return () => clearInterval(interval)
-  }, [fetchMatches])
+  }, [fetchMatches, tab, page])
 
   const leagueOptions = useMemo(() => {
-    const all = [...matches.live, ...matches.upcoming, ...matches.finished]
-    const codes = [...new Set(all.map(m => m.league_code))].sort()
+    const codes = [...new Set(matches.map(m => m.league_code))].sort()
     return codes.map(code => ({ value: code, label: code }))
   }, [matches])
 
@@ -71,12 +80,12 @@ export default function Dashboard() {
           <>
             <div className={styles.tabs}>
               {TABS.map(t => {
-                const count = matches[t.key]?.length ?? 0
+                const count = counts[t.key] ?? 0
                 return (
                   <button
                     key={t.key}
                     className={`${styles.tab} ${tab === t.key ? styles.tabActive : ''}`}
-                    onClick={() => setTab(t.key)}
+                    onClick={() => { setTab(t.key); setPage(1) }}
                   >
                     {t.live && count > 0 && <span className={styles.liveIndicator}>●</span>}
                     {t.label}
@@ -98,10 +107,14 @@ export default function Dashboard() {
             />
 
             <TabContent
-              matches={matches[tab]}
+              matches={matches}
               section={tab}
               pageSize={PAGE_SIZES[tab]}
               leagueFilter={leagueFilter}
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={(next) => setPage(next)}
+              serverPaging
             />
           </>
         )}

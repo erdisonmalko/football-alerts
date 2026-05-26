@@ -90,6 +90,22 @@ class SubscriptionOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class PaginatedSubscriptions(BaseModel):
+    items: list[SubscriptionOut]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
+class UserProfileStatsOut(BaseModel):
+    total_alerts: int
+    league_alerts: int
+    team_alerts: int
+    match_alerts: int
+    servers_joined: int
+
+
 # ── Match ─────────────────────────────────────────────────────────────────────
 
 
@@ -121,6 +137,17 @@ class PaginatedMatches(BaseModel):
     page: int
     page_size: int
     total_pages: int
+
+
+class PaginatedUserMatches(BaseModel):
+    items: list[MatchOut]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+    live_count: int
+    upcoming_count: int
+    finished_count: int
 
 
 class UserMatchesOut(BaseModel):

@@ -1,10 +1,10 @@
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.v1.core.security import hash_password
-from app.v1.models.models import Subscription, User
+from app.v1.models.models import Subscription, User, SubscriptionType, ServerMember
 from app.v1.schemas.schemas import SubscriptionCreate, UserRegister
 
 from app.v1.core.logger import get_logger, setup_logging
@@ -41,13 +41,88 @@ async def create_user(db: AsyncSession, data: UserRegister) -> User:
 # ── Subscriptions ─────────────────────────────────────────────────────────────
 
 
-async def get_user_subscriptions(db: AsyncSession, user_id: int) -> list[Subscription]:
+async def get_user_subscriptions(
+    db: AsyncSession,
+    user_id: int,
+    page: int = 1,
+    page_size: int = 100,
+    subscription_type: Optional[SubscriptionType] = None,
+) -> tuple[list[Subscription], int]:
+    """Return a page of subscriptions and the total count.
+
+    Returns (items, total)
+    """
+    # base_where = (Subscription.user_id == user_id,)
+    if subscription_type is not None:
+        count_q = (
+            select(func.count())
+            .select_from(Subscription)
+            .where(
+                Subscription.user_id == user_id,
+                Subscription.subscription_type == subscription_type,
+            )
+        )
+        data_q = (
+            select(Subscription)
+            .where(
+                Subscription.user_id == user_id,
+                Subscription.subscription_type == subscription_type,
+            )
+            .order_by(Subscription.created_at.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+    else:
+        count_q = (
+            select(func.count())
+            .select_from(Subscription)
+            .where(Subscription.user_id == user_id)
+        )
+        data_q = (
+            select(Subscription)
+            .where(Subscription.user_id == user_id)
+            .order_by(Subscription.created_at.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+
+    total_res = await db.execute(count_q)
+    total = int(total_res.scalar_one())
+    result = await db.execute(data_q)
+    items = list(result.scalars().all())
+    return items, total
+
+
+async def get_user_profile_stats(db: AsyncSession, user_id: int) -> dict:
     result = await db.execute(
-        select(Subscription)
+        select(Subscription.subscription_type, func.count())
         .where(Subscription.user_id == user_id)
-        .order_by(Subscription.created_at.desc())
+        .group_by(Subscription.subscription_type)
     )
-    return list(result.scalars().all())
+    type_counts = {
+        SubscriptionType.LEAGUE.value: 0,
+        SubscriptionType.TEAM.value: 0,
+        SubscriptionType.MATCH.value: 0,
+    }
+    total = 0
+    for subscription_type, count in result.all():
+        type_counts[subscription_type] = int(count)
+        total += int(count)
+
+    server_result = await db.execute(
+        select(func.count())
+        .select_from(ServerMember)
+        .where(ServerMember.user_id == user_id)
+    )
+    server_count = int(server_result.scalar_one())
+
+    return {
+        "total_alerts": total,
+        "league_alerts": type_counts[SubscriptionType.LEAGUE.value],
+        "team_alerts": type_counts[SubscriptionType.TEAM.value],
+        "match_alerts": type_counts[SubscriptionType.MATCH.value],
+        "servers_joined": server_count,
+    }
 
 
 async def create_subscription(

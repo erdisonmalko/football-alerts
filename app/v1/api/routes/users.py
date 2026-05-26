@@ -9,13 +9,21 @@ from app.v1.schemas.schemas import (
     SubscriptionOut,
     UserMatchesOut,
     UserOut,
+    UserProfileStatsOut,
     UserUpdate,
+    PaginatedSubscriptions,
+    PaginatedUserMatches,
 )
-from app.v1.services.match_service import get_matches_for_user
+from fastapi import Query
+from typing import Optional
+import math
+from app.v1.models.models import SubscriptionType
+from app.v1.services.match_service import get_matches_for_user, get_user_matches_page
 from app.v1.services.user_service import (
     create_subscription,
     delete_subscription,
     get_user_subscriptions,
+    get_user_profile_stats,
 )
 
 from app.v1.core.logger import get_logger
@@ -71,19 +79,67 @@ async def get_my_matches(
     return await get_matches_for_user(db, current_user.id)
 
 
-# ── Subscriptions ──────────────────────────────────────────────────────────────
-
-
-@router.get("/me/subscriptions", response_model=list[SubscriptionOut])
-async def list_subscriptions(
+@router.get("/me/matches/paged", response_model=PaginatedUserMatches)
+async def get_my_matches_paged(
+    section: str = Query("upcoming", regex="^(live|upcoming|finished)$"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=50),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Lists the user's current league/team subscriptions."""
+    logger.info(
+        "[get_my_matches_paged] User %s requested paged matches section=%s page=%s page_size=%s",
+        current_user.email,
+        section,
+        page,
+        page_size,
+    )
+    return await get_user_matches_page(
+        db, current_user.id, section=section, page=page, page_size=page_size
+    )
+
+
+# ── Subscriptions ──────────────────────────────────────────────────────────────
+
+
+@router.get("/me/subscriptions", response_model=PaginatedSubscriptions)
+async def list_subscriptions(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(15, ge=1, le=100),
+    subscription_type: Optional[SubscriptionType] = Query(default=None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Lists the user's current league/team subscriptions with pagination."""
     logger.info(
         "[list_subscriptions] User %s requested their subscriptions", current_user.email
     )
-    return await get_user_subscriptions(db, current_user.id)
+    items, total = await get_user_subscriptions(
+        db,
+        current_user.id,
+        page=page,
+        page_size=page_size,
+        subscription_type=subscription_type,
+    )
+    total_pages = math.ceil(total / page_size) if page_size else 1
+    return PaginatedSubscriptions(
+        items=items,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+    )
+
+
+@router.get("/me/profile-stats", response_model=UserProfileStatsOut)
+async def get_profile_stats(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    logger.info(
+        "[get_profile_stats] User %s requested their profile stats", current_user.email
+    )
+    return await get_user_profile_stats(db, current_user.id)
 
 
 @router.post(
