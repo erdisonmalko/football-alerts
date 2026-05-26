@@ -29,7 +29,7 @@ class TestSubscriptions:
     async def test_list_subscriptions_empty(self, auth_client: AsyncClient):
         res = await auth_client.get("/api/v1/users/me/subscriptions")
         assert res.status_code == 200
-        assert isinstance(res.json(), list)
+        assert isinstance(res.json()['items'], list)
 
     async def test_create_league_subscription(self, auth_client: AsyncClient):
         res = await auth_client.post("/api/v1/users/me/subscriptions", json={
