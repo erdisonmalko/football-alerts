@@ -20,19 +20,31 @@ export default function NotificationBell() {
   const [prediction, setPrediction] = useState({}) // { challengeId: value }
   const [challengeError, setChallengeError] = useState({})
   const [responded, setResponded] = useState({}) // { challengeId: 'accepted'|'declined' }
+  
+  // Local UI blocklist state to filter out expired or closed items
+  const [dismissedIds, setDismissedIds] = useState([])
+  
   const ref = useRef(null)
 
+  // Combined fetch for background count validation
   const fetchCount = useCallback(async () => {
     try {
       const [requestsData, feedData] = await Promise.all([
         getPendingRequestsCount(),
         getChallengeFeed(),
       ])
-      setCount((requestsData.count || 0) + (feedData.incoming?.length || 0))
+      
+      const rawIncoming = feedData.incoming || []
+      
+      // Filter out elements that are already explicitly blocked locally
+      const validRequestsCount = requestsData.count || 0 
+      const validChallenges = rawIncoming.filter(c => !dismissedIds.includes(`challenge-${c.id}`))
+      
+      setCount(validRequestsCount + validChallenges.length)
     } catch {
       // silent
     }
-  }, [])
+  }, [dismissedIds])
 
   const fetchAll = useCallback(async () => {
     setLoading(true)
@@ -48,9 +60,7 @@ export default function NotificationBell() {
         ownedServers.map(async (server) => {
           try {
             const reqs = await getJoinRequests(server.id)
-            return reqs.map(req => {
-              return { serverId: server.id, serverName: server.name, request: req }
-            })
+            return reqs.map(req => ({ serverId: server.id, serverName: server.name, request: req }))
           } catch {
             return []
           }
@@ -122,6 +132,11 @@ export default function NotificationBell() {
       const message = parseApiError(err)
       setChallengeError(prev => ({ ...prev, [challenge.id]: message }))
       console.error('Failed to accept challenge:', err)
+      
+      // Auto-dismiss element from view after 1.5s delay if stale or locked
+      setTimeout(() => {
+        dismissNotification(`challenge-${challenge.id}`)
+      }, 1500)
     } finally {
       setActing(null)
     }
@@ -138,21 +153,42 @@ export default function NotificationBell() {
       const message = parseApiError(err)
       setChallengeError(prev => ({ ...prev, [challenge.id]: message }))
       console.error('Failed to decline challenge:', err)
+      
+      // Auto-dismiss element from view after 1.5s delay if stale or locked
+      setTimeout(() => {
+        dismissNotification(`challenge-${challenge.id}`)
+      }, 1500)
     } finally {
       setActing(null)
     }
   }
 
-  const totalCount = joinRequests.length + incomingChallenges.filter(c => !responded[c.id]).length
-  const isEmpty = joinRequests.length === 0 && incomingChallenges.length === 0
+  // Handler for clearing a specific item from state visibility on manual click
+  const dismissNotification = (id) => {
+    setDismissedIds(prev => {
+      if (prev.includes(id)) return prev
+      // Decrement main counter when removing a distinct visible item
+      setCount(c => Math.max(0, c - 1))
+      return [...prev, id]
+    })
+  }
+
+  // Runtime Filtering Configurations
+  const filteredJoinRequests = joinRequests.filter(r => !dismissedIds.includes(r.request.id))
+  
+  const filteredChallenges = incomingChallenges
+    .filter(c => !responded[c.id])
+    .filter(c => !dismissedIds.includes(`challenge-${c.id}`))
+
+  const isEmpty = filteredJoinRequests.length === 0 && filteredChallenges.length === 0
   const MAX_VISIBLE = 5
 
-  // In the render:
-  const visibleJoinRequests = joinRequests.slice(0, MAX_VISIBLE)
-  const hiddenJoinCount = joinRequests.length - visibleJoinRequests.length
+  // Slicing logic using filtered datasets
+  const visibleJoinRequests = filteredJoinRequests.slice(0, MAX_VISIBLE)
+  const hiddenJoinCount = filteredJoinRequests.length - visibleJoinRequests.length
 
-  const visibleChallenges = incomingChallenges.filter(c => !responded[c.id]).slice(0, MAX_VISIBLE)
-  const hiddenChallengeCount = incomingChallenges.filter(c => !responded[c.id]).length - visibleChallenges.length
+  const visibleChallenges = filteredChallenges.slice(0, MAX_VISIBLE)
+  const hiddenChallengeCount = filteredChallenges.length - visibleChallenges.length
   
   return (
     <div className={styles.wrap} ref={ref}>
@@ -179,8 +215,15 @@ export default function NotificationBell() {
                 <>
                   <p className={styles.sectionLabel}>JOIN REQUESTS</p>
                   {visibleJoinRequests.map(({ serverId, serverName, request }) => (
-                    <div key={request.id} className={styles.item}>
-                      <div className={styles.itemInfo}>
+                    <div key={request.id} className={styles.item} style={{ position: 'relative' }}>
+                      <button 
+                        onClick={() => dismissNotification(request.id)}
+                        style={{ position: 'absolute', top: '8px', right: '8px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', color: '#888' }}
+                        title="Dismiss"
+                      >
+                        ✕
+                      </button>
+                      <div className={styles.itemInfo} style={{ paddingRight: '16px' }}>
                         <p className={styles.createAt}>
                           {new Date(request.created_at).toLocaleString()}
                         </p>
@@ -220,8 +263,15 @@ export default function NotificationBell() {
                 <>
                   <p className={styles.sectionLabel}>CHALLENGE INVITES</p>
                   {visibleChallenges.map(challenge => (
-                    <div key={challenge.id} className={styles.item}>
-                      <div className={styles.itemInfo}>
+                    <div key={challenge.id} className={styles.item} style={{ position: 'relative' }}>
+                      <button 
+                        onClick={() => dismissNotification(`challenge-${challenge.id}`)}
+                        style={{ position: 'absolute', top: '8px', right: '8px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', color: '#888' }}
+                        title="Dismiss"
+                      >
+                        ✕
+                      </button>
+                      <div className={styles.itemInfo} style={{ paddingRight: '16px' }}>
                         <p className={styles.createAt}>
                           {new Date(challenge.created_at).toLocaleString()}
                         </p>
@@ -243,6 +293,7 @@ export default function NotificationBell() {
                             className={styles.predInput}
                             placeholder="2-1"
                             value={prediction[challenge.id] || ''}
+                            disabled={acting === `challenge-${challenge.id}`}
                             onChange={e => setPrediction(prev => ({
                               ...prev,
                               [challenge.id]: e.target.value,

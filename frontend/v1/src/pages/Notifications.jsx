@@ -55,7 +55,7 @@ export default function Notifications() {
       )
 
       setJoinRequests(nestedRequests.flat())
-      console.log('All challenge feed data:', feedData)
+      console.log("Incoming challenges feed data:", feedData.incoming)
       setIncomingChallenges(feedData.incoming || [])
     } catch (err) {
       console.error('Failed to fetch notifications:', err)
@@ -205,7 +205,30 @@ export default function Notifications() {
             <button 
               className={styles.clearAllBtn} 
               onClick={clearAllNotifications}
-              style={{ padding: '8px 16px', cursor: 'pointer' }}
+              style={{ 
+                padding: '8px 16px', 
+                cursor: 'pointer',
+                background: 'linear-gradient(135deg, #141414 0%, #070a08 100%)', // Rich deep black base
+                color: '#10b981',                 // Vibrant emerald green text
+                border: '1px solid #10b981',       // Matching crisp green border
+                borderRadius: '6px',              // Clean, slightly rounded corners
+                fontSize: '13px',
+                fontWeight: '6px',
+                letterSpacing: '0.5px',
+                textTransform: 'uppercase',
+                boxShadow: '0 2px 8px rgba(16, 185, 129, 0.15)', // Subtle green glow
+                transition: 'all 0.2s ease-in-out'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#10b981'; // Inverts to full green background on hover
+                e.currentTarget.style.color = '#000000';      // Inverts text to pure black
+                e.currentTarget.style.boxShadow = '0 4px 14px rgba(16, 185, 129, 0.4)'; // Enhanced glow
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, #141414 0%, #070a08 100%)';
+                e.currentTarget.style.color = '#10b981';
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.15)';
+              }}
             >
               Clear All From View
             </button>
@@ -231,12 +254,31 @@ export default function Notifications() {
             <div className={styles.notificationsList}>
               {visibleNotifications.map(item => (
                 <div key={item.id} className={`${bellStyles.item} ${styles.notificationItem}`} style={{ position: 'relative' }}>
-                  
                   {/* Dismiss "X" Button for UI-only removal */}
                   <button 
                     onClick={() => dismissNotification(item.id)} 
                     className={styles.dismissBtn}
-                    style={{ position: 'absolute', top: '10px', right: '10px', background: 'none', border: 'none', cursor: 'pointer' }}
+                    style={{ 
+                      position: 'absolute', 
+                      top: '12px', 
+                      right: '12px', 
+                      background: '#f3f4f6',      // Light gray circular badge background
+                      color: '#4b5563',           // Sharp contrast dark gray text color
+                      border: 'none', 
+                      borderRadius: '50%',        // Circular perimeter boundary
+                      width: '24px', 
+                      height: '24px', 
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer', 
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      zIndex: 10,                 // Keeps button above overlay elements
+                      transition: 'background-color 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e5e7eb'} // Smooth hover effect
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
                     title="Dismiss notification"
                   >
                     ✕
