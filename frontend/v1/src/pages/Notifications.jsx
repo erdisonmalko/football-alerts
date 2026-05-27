@@ -52,6 +52,7 @@ export default function Notifications() {
       )
 
       setJoinRequests(nestedRequests.flat())
+      console.log('All challenge feed data:', feedData)
       setIncomingChallenges(feedData.incoming || [])
     } catch (err) {
       console.error('Failed to fetch notifications:', err)

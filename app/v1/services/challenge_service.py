@@ -515,6 +515,10 @@ async def get_user_challenge_feed(
         elif (
             entry.status == ChallengeEntryStatus.PENDING
             and challenge.created_by_id != user_id
+            # only show as incoming if match hasn't started
+            # this because we send as notification to user and if they try to accpet/decinle a challenge
+            # after a match has started, it will fail and cause confusion — better to just hide it from feed
+            and match.status in ("SCHEDULED", "TIMED")
         ):
             incoming.append(item)
         elif entry.status == ChallengeEntryStatus.ACCEPTED and challenge.status in (
