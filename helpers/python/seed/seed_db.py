@@ -996,7 +996,7 @@ async def main(args: argparse.Namespace) -> None:
 
         # 2. Match IDs (already in DB from football-data.org sync)
         match_ids = await get_match_ids(db)
-        if not match_ids:
+        if not match_ids or len(match_ids) < 20:
             print(
                 "  ⚠  No matches in DB. Run admin sync-matches first for realistic data."
             )
@@ -1007,7 +1007,7 @@ async def main(args: argparse.Namespace) -> None:
             fake_match_ids = await seed_matches(db, count=100)
             await db.commit()
             print(f"     → {len(fake_match_ids)} total matches available for seeding")
-
+            match_ids = await get_match_ids(db)  # refresh with any new matches
         # 3. Subscriptions
         await seed_subscriptions(db, user_ids, match_ids)
         await db.commit()

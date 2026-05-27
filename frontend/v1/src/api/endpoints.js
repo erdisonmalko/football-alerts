@@ -1,9 +1,16 @@
 import api from './client'
 
-//health
+// ==========================================
+// SYSTEM / HEALTH
+// ==========================================
+
 export const checkHealth = () => api.get('/health').then(r => r.data)
 
-// Auth
+
+// ==========================================
+// AUTHENTICATION
+// ==========================================
+
 export const register = (email, password, fullName) =>
   api.post('/auth/register', { email, password, full_name: fullName })
 
@@ -22,9 +29,37 @@ export const logout = () => api.post('/auth/logout')
 
 export const getMe = () => api.get('/auth/me').then(r => r.data)
 
-export const getUserProfileStats = () => api.get('/users/me/profile-stats').then(r => r.data)
 
-// Subscriptions
+// ==========================================
+// USER & PROFILE
+// ==========================================
+
+export const updateProfile = (data) =>
+  api.patch('/users/me', data).then(r => r.data)
+
+export const deleteAccount = () =>
+  api.delete('/users/me')
+
+export const getUserProfileStats = () => 
+  api.get('/users/me/profile-stats').then(r => r.data)
+
+// User matches (dashboard — live, upcoming, finished)
+export const getMyMatches = () =>
+  api.get('/users/me/matches').then(r => r.data)
+
+export const getMyMatchesPaged = ({ section = 'upcoming', page = 1, pageSize = 10 } = {}) => {
+  const params = new URLSearchParams()
+  params.append('section', section)
+  params.append('page', page)
+  params.append('page_size', pageSize)
+  return api.get(`/users/me/matches/paged?${params.toString()}`).then(r => r.data)
+}
+
+
+// ==========================================
+// SUBSCRIPTIONS
+// ==========================================
+
 export const getSubscriptions = ({ page = 1, pageSize = 15, subscriptionType = null } = {}) => {
   const params = new URLSearchParams()
   params.append('page', page)
@@ -43,45 +78,34 @@ export const addSubscription = (type, externalId, displayName) =>
 export const removeSubscription = (id) =>
   api.delete(`/users/me/subscriptions/${id}`)
 
-// Profile
-export const updateProfile = (data) =>
-  api.patch('/users/me', data).then(r => r.data)
 
-export const deleteAccount = () =>
-  api.delete('/users/me')
+// ==========================================
+// FOOTBALL DATA
+// ==========================================
 
 // Upcoming matches (browse) - change the query string to static page and page number
 export const getUpcomingMatches = (queryString = '') =>
   api.get(`/football/matches/upcoming${queryString}`).then(r => r.data)
 
-// Football data
 export const getLeagues = () =>
   api.get('/football/leagues').then(r => r.data)
 
 export const getTeamsByLeague = (code) =>
   api.get(`/football/leagues/${code}/teams`).then(r => r.data)
 
-// Add match to user's calendar
+
+// ==========================================
+// CALENDAR INTEGRATIONS
+// ==========================================
+
+// In-App Match Calendar
 export const addMatchToCalendar = (matchId) =>
   api.post(`/calendar/matches/add-match/${matchId}`)
 
 export const removeMatchFromCalendar = (matchId) =>
   api.delete(`/calendar/matches/remove-match/${matchId}`)
 
-// User matches (dashboard — live, upcoming, finished)
-export const getMyMatches = () =>
-  api.get('/users/me/matches').then(r => r.data)
-
-export const getMyMatchesPaged = ({ section = 'upcoming', page = 1, pageSize = 10 } = {}) => {
-  const params = new URLSearchParams()
-  params.append('section', section)
-  params.append('page', page)
-  params.append('page_size', pageSize)
-  return api.get(`/users/me/matches/paged?${params.toString()}`).then(r => r.data)
-}
-
-// Google Calendar
-
+// Google Calendar OAuth
 export const getGoogleStatus = () =>
   api.get('/auth/google/status').then(r => r.data)
 
@@ -93,13 +117,36 @@ export const connectGoogle = () => {
 export const disconnectGoogle = () =>
   api.delete('/auth/google/disconnect')
 
-// Servers
+
+// ==========================================
+// SERVERS
+// ==========================================
+
 export const getMyServers = ({ page = 1, pageSize = 15 } = {}) =>
   api.get(`/servers/my-servers?page=${page}&page_size=${pageSize}`).then(r => r.data)
 
 export const getPublicServers = ({ page = 1, pageSize = 15 } = {}) =>
   api.get(`/servers/?page=${page}&page_size=${pageSize}`).then(r => r.data)
 
+export const createServer = (name, isPublic) =>
+  api.post('/servers/', { name, is_public: isPublic }).then(r => r.data)
+
+export const getServer = (serverId) =>
+  api.get(`/servers/${serverId}`).then(r => r.data)
+
+export const updateServer = (serverId, name, isPublic) =>
+  api.patch(`/servers/${serverId}`, { name, is_public: isPublic }).then(r => r.data)
+
+export const leaveServer = (serverId) =>
+  api.delete(`/servers/${serverId}/leave`).then(r => r.data)
+
+export const regenerateInviteCode = (serverId) =>
+  api.post(`/servers/${serverId}/regenerate-invite-code`).then(r => r.data)
+
+export const getServerLeaderboard = (serverId) =>
+  api.get(`/servers/${serverId}/leaderboard`).then(r => r.data)
+
+// Server Join Requests
 export const requestToJoin = (serverId) =>
   api.post(`/servers/${serverId}/request-join`).then(r => r.data)
 
@@ -118,27 +165,13 @@ export const handleJoinRequest = (serverId, requestId, action) =>
 
 export const getPendingRequestsCount = () =>
   api.get('/servers/pending-requests-count').then(r => r.data)
- 
-export const createServer = (name, isPublic) =>
-  api.post('/servers/', { name, is_public: isPublic }).then(r => r.data)
 
-export const getServer = (serverId) =>
-  api.get(`/servers/${serverId}`).then(r => r.data)
 
-export const leaveServer = (serverId) =>
-  api.delete(`/servers/${serverId}/leave`).then(r => r.data)
+// ==========================================
+// CHALLENGES
+// ==========================================
 
-export const updateServer = (serverId, name, isPublic) =>
-  api.patch(`/servers/${serverId}`, { name, is_public: isPublic }).then(r => r.data)
-
-export const regenerateInviteCode = (serverId) =>
-  api.post(`/servers/${serverId}/regenerate-invite-code`).then(r => r.data)
-
-export const getServerLeaderboard = (serverId) =>
-  api.get(`/servers/${serverId}/leaderboard`).then(r => r.data)
-
-// Challenges - they go through the server because they are server-specific, 
-// and we want to show them in the server feed
+// Request deduplication mechanism for server-specific feeds
 const pendingRequests = new Map()
 
 const dedupeGet = (url) => {
@@ -166,13 +199,10 @@ export const getServerChallenges = (serverId, { page = 1, pageSize = 15, status 
 export const createChallenge = (serverId, payload) =>
   api.post(`/servers/${serverId}/challenges`, payload).then(r => r.data)
 
-// challenges
-
 export const acceptChallenge = (serverId, challengeId, prediction) =>
   api.post(`/servers/${serverId}/challenges/${challengeId}/accept`, {
     prediction,
   }).then(r => r.data)
 
 export const declineChallenge = (serverId, challengeId) =>
-  api.post(`/servers/${serverId}/challenges/${challengeId}/decline`)
-     .then(r => r.data)
+  api.post(`/servers/${serverId}/challenges/${challengeId}/decline`).then(r => r.data)
