@@ -27,6 +27,9 @@ export default function Notifications() {
   const [challengeError, setChallengeError] = useState({})
   const [responded, setResponded] = useState({})
   const [page, setPage] = useState(1)
+  
+  // Local UI state to track notifications hidden manually or via expired errors
+  const [dismissedIds, setDismissedIds] = useState([])
 
   const name = user?.full_name?.split(' ')[0] || 'Fan'
 
@@ -105,6 +108,11 @@ export default function Notifications() {
       const message = parseApiError(err)
       setChallengeError(prev => ({ ...prev, [challenge.id]: message }))
       console.error('Failed to accept challenge:', err)
+      
+      // Auto-dismiss if the challenge has locked, expired, or failed critically
+      setTimeout(() => {
+        setDismissedIds(prev => [...prev, `challenge-${challenge.id}`])
+      }, 1500)
     } finally {
       setActing(null)
     }
@@ -120,9 +128,25 @@ export default function Notifications() {
       const message = parseApiError(err)
       setChallengeError(prev => ({ ...prev, [challenge.id]: message }))
       console.error('Failed to decline challenge:', err)
+      
+      // Auto-dismiss if the challenge has locked, expired, or failed critically
+      setTimeout(() => {
+        setDismissedIds(prev => [...prev, `challenge-${challenge.id}`])
+      }, 1500)
     } finally {
       setActing(null)
     }
+  }
+
+  // Individual manual dismissal handler
+  const dismissNotification = (id) => {
+    setDismissedIds(prev => [...prev, id])
+  }
+
+  // Clear all items currently calculated in the list
+  const clearAllNotifications = () => {
+    const allIds = notificationItems.map(item => item.id)
+    setDismissedIds(prev => [...new Set([...prev, ...allIds])])
   }
 
   const activeChallenges = useMemo(
@@ -130,8 +154,9 @@ export default function Notifications() {
     [incomingChallenges, responded]
   )
 
+  // Combined tracking list filtered down by local UI dismissals
   const notificationItems = useMemo(() => {
-    return [
+    const items = [
       ...joinRequests.map(({ serverId, serverName, request }) => ({
         id: request.id,
         type: 'join',
@@ -147,7 +172,9 @@ export default function Notifications() {
         challenge,
       })),
     ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-  }, [joinRequests, activeChallenges])
+
+    return items.filter(item => !dismissedIds.includes(item.id))
+  }, [joinRequests, activeChallenges, dismissedIds])
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(notificationItems.length / ITEMS_PER_PAGE)),
@@ -174,6 +201,15 @@ export default function Notifications() {
             <p className={styles.greeting}>NOTIFICATIONS</p>
             <h1 className={styles.title}>Manage your pending notifications</h1>
           </div>
+          {!isEmpty && (
+            <button 
+              className={styles.clearAllBtn} 
+              onClick={clearAllNotifications}
+              style={{ padding: '8px 16px', cursor: 'pointer' }}
+            >
+              Clear All From View
+            </button>
+          )}
         </div>
 
         {loading ? (
@@ -185,21 +221,32 @@ export default function Notifications() {
             <div className={styles.summaryBar}>
               <div>
                 <p className={styles.summaryLabel}>PENDING NOTIFICATIONS</p>
-                <p className={styles.summaryTitle}>{joinRequests.length + activeChallenges.length} total</p>
+                <p className={styles.summaryTitle}>{notificationItems.length} visible</p>
               </div>
               <span className={styles.summaryMeta}>
-                {joinRequests.length} join request{joinRequests.length === 1 ? '' : 's'} · {activeChallenges.length} challenge invite{activeChallenges.length === 1 ? '' : 's'}
+                Active view filters out dismissed or expired items.
               </span>
             </div>
 
             <div className={styles.notificationsList}>
               {visibleNotifications.map(item => (
-                <div key={item.id} className={`${bellStyles.item} ${styles.notificationItem}`}>
+                <div key={item.id} className={`${bellStyles.item} ${styles.notificationItem}`} style={{ position: 'relative' }}>
+                  
+                  {/* Dismiss "X" Button for UI-only removal */}
+                  <button 
+                    onClick={() => dismissNotification(item.id)} 
+                    className={styles.dismissBtn}
+                    style={{ position: 'absolute', top: '10px', right: '10px', background: 'none', border: 'none', cursor: 'pointer' }}
+                    title="Dismiss notification"
+                  >
+                    ✕
+                  </button>
+
                   <div className={styles.notificationRowTop}>
                     <span className={styles.notificationBadge}>
                       {item.type === 'join' ? 'JOIN REQUEST' : 'CHALLENGE INVITE'}
                     </span>
-                    <p className={`${bellStyles.createAt} ${styles.notificationDate}`}>
+                    <p className={`${bellStyles.createAt} ${styles.notificationDate}`} style={{ marginRight: '24px' }}>
                       {new Date(item.created_at).toLocaleString()}
                     </p>
                   </div>
@@ -251,6 +298,7 @@ export default function Notifications() {
                             className={`${bellStyles.predInput} ${styles.notificationInput}`}
                             placeholder="2-1"
                             value={prediction[item.challenge.id] || ''}
+                            disabled={acting === `challenge-${item.challenge.id}`}
                             onChange={e => setPrediction(prev => ({
                               ...prev,
                               [item.challenge.id]: e.target.value,
