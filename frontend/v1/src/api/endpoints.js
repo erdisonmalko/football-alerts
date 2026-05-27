@@ -206,3 +206,14 @@ export const acceptChallenge = (serverId, challengeId, prediction) =>
 
 export const declineChallenge = (serverId, challengeId) =>
   api.post(`/servers/${serverId}/challenges/${challengeId}/decline`).then(r => r.data)
+
+
+// ==========================================
+// NOTIFICATIONS
+// ==========================================
+
+// export const markNotificationRead = (notificationId) =>
+//   api.post(`/notifications/${notificationId}/mark-read`).then(r => r.data)
+
+// export const markAllNotificationsRead = () =>
+//   api.post('/notifications/mark-all-read').then(r => r.data)
