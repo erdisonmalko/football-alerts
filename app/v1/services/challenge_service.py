@@ -48,6 +48,11 @@ def _extract_scoreline(prediction: str) -> tuple[int, int] | None:
     Returns:
         (home_goals, away_goals) tuple or None if invalid format
     """
+    # Limit input length to prevent ReDoS attacks
+    # Valid predictions are very short (e.g., "2-1" is 3 chars, "2 - 1" is 5 chars)
+    if len(prediction) > 100:
+        return None
+
     # Match any two numbers separated by -, –, :, or whitespace around them
     match = re.search(r"(\d+)\s*[-–:]\s*(\d+)", prediction)
     if not match:
