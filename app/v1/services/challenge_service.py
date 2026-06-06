@@ -48,21 +48,23 @@ def _extract_scoreline(prediction: str) -> tuple[int, int] | None:
     Returns:
         (home_goals, away_goals) tuple or None if invalid format
     """
-    # Limit input length to prevent ReDoS attacks
-    if len(prediction) > 100:
+    if not prediction:
         return None
 
-    # Strip whitespace and validate format using string operations (no regex to avoid ReDoS)
     prediction = prediction.strip()
 
-    # Try each valid separator
+    if len(prediction) > 20:
+        return None
+
     for sep in ["-", "–", ":"]:
         if sep in prediction:
-            parts = prediction.split(sep, 1)  # Split only on first separator
+            parts = prediction.split(sep, 1)
             if len(parts) == 2:
                 try:
                     home = int(parts[0].strip())
                     away = int(parts[1].strip())
+                    if home > 99 or away > 99 or home < 0 or away < 0:
+                        return None
                     return (home, away)
                 except ValueError:
                     pass
