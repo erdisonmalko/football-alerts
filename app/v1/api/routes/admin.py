@@ -10,10 +10,10 @@ from app.v1.core.config import settings
 from app.v1.db.session import get_db
 from app.v1.models.models import AlertType
 from app.v1.services.match_service import (
-    get_matches_due_for_alerts, 
+    get_matches_due_for_alerts,
     sync_all_leagues,
-    update_live_and_recent_matches
-    )
+    update_live_and_recent_matches,
+)
 from app.v1.services.challenge_service import (
     find_challenges_to_settle,
     lock_expired_challenges,
