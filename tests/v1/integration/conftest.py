@@ -58,13 +58,19 @@ async def auth_client() -> AsyncClient:
         transport=ASGITransport(app=app),
         base_url="http://test",
     ) as ac:
-        await ac.post("/api/v1/auth/register", json={
-            "email": "testuser@example.com",
-            "password": "TestPass123",
-            "full_name": "Test User",
-        })
-        await ac.post("/api/v1/auth/login", data={
-            "username": "testuser@example.com",
-            "password": "TestPass123",
-        })
+        await ac.post(
+            "/api/v1/auth/register",
+            json={
+                "email": "testuser@example.com",
+                "password": "TestPass123",
+                "full_name": "Test User",
+            },
+        )
+        await ac.post(
+            "/api/v1/auth/login",
+            data={
+                "username": "testuser@example.com",
+                "password": "TestPass123",
+            },
+        )
         yield ac

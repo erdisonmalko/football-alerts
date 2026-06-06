@@ -15,17 +15,13 @@ DBNAME = os.getenv("SUPABASE_DATABASE_NAME")
 # Connect to the database
 try:
     connection = psycopg2.connect(
-        user=USER,
-        password=PASSWORD,
-        host=HOST,
-        port=PORT,
-        dbname=DBNAME
+        user=USER, password=PASSWORD, host=HOST, port=PORT, dbname=DBNAME
     )
     print("Connection successful!")
-    
+
     # Create a cursor to execute SQL queries
     cursor = connection.cursor()
-    
+
     # Example query
     cursor.execute("SELECT NOW();")
     result = cursor.fetchone()
