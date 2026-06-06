@@ -1,150 +1,66 @@
-# Football Alerts — Backend
+# Football Alerts
 
-Email-based match reminder service. Notifies users **1 week**, **3 days**, and **6 hours** before
-football matches they care about.
+A full-stack football match alert application that notifies users about upcoming football matches via email and Google Calendar integration. Users subscribe to leagues, teams, or individual matches and receive alerts at configurable intervals before kickoff.
 
----
+**Live Demo**: [frontend-alerts.up.railway.app](https://frontend-alerts.up.railway.app)
 
-## Stack
+## Quick Start
 
-| Layer | Technology |
-|---|---|
-| API | FastAPI + Uvicorn |
-| Database | PostgreSQL 16 + SQLAlchemy 2 (async) |
-| Migrations | Alembic |
-| Task Queue | Celery + Redis |
-| Match Data | [football-data.org](https://www.football-data.org) (free tier) |
-| Email | [Resend](https://resend.com) (free tier: 3k/month) |
+### Docker Setup (Recommended)
 
----
-
-## Project Structure
-
-```
-football-alerts/
-├── app/
-│   ├── api/routes/
-│   │   ├── auth.py        # POST /register, POST /login
-│   │   ├── users.py       # GET/PATCH /me, subscriptions CRUD
-│   │   ├── football.py    # GET leagues, GET teams
-│   │   └── admin.py       # Manual sync + alert preview
-│   ├── core/
-│   │   ├── config.py      # Settings via pydantic-settings
-│   │   └── security.py    # JWT + password hashing
-│   ├── db/
-│   │   └── session.py     # Async SQLAlchemy engine + get_db()
-│   ├── models/
-│   │   └── models.py      # User, Subscription, Match, AlertLog
-│   ├── schemas/
-│   │   └── schemas.py     # Pydantic request/response models
-│   ├── services/
-│   │   ├── user_service.py      # User + subscription DB ops
-│   │   ├── football_service.py  # football-data.org HTTP client
-│   │   ├── match_service.py     # Sync + alert window logic
-│   │   └── email_service.py     # Resend email sending
-│   ├── tasks/
-│   │   ├── celery_app.py        # Celery config + beat schedule
-│   │   └── alert_tasks.py       # sync_matches + dispatch_alerts tasks
-│   └── main.py            # FastAPI app + router registration
-├── alembic/               # DB migrations
-├── docker-compose.yml
-├── Dockerfile
-├── requirements.txt
-└── .env.example
-```
-
----
-
-## Setup
-
-### 1. Get API keys
-- **football-data.org** — [register free](https://www.football-data.org/client/register) → get API key
-- **Resend** — [register free](https://resend.com) → create API key + verify sender domain
-
-### 2. Configure environment
 ```bash
+# Clone repository
+git clone https://github.com/erdisonmalko/football-alerts.git
+cd football-alerts
+
+# Create environment file
 cp .env.example .env
-# Edit .env with your keys
-```
+# Edit .env with your API keys
 
-### 3. Run with Docker Compose
-```bash
+# Start all services
 docker compose up --build
-```
 
-This starts: PostgreSQL, Redis, FastAPI (port 8000), Celery worker, Celery beat scheduler.
-
-### 4. Run migrations (first time)
-```bash
+# Run migrations
 docker compose exec api alembic upgrade head
+
+# Access the app
+# Frontend: http://localhost:5173
+# API Docs: http://localhost:8000/docs
 ```
 
-### 5. Access the API
-- Swagger UI: http://localhost:8000/docs
-- ReDoc:       http://localhost:8000/redoc
+### Local Setup
 
----
+See [Setup Guide](./docs/SETUP.md) for detailed local development instructions.
 
-## Supported Leagues (free tier)
+## Documentation
 
-| Code | League | Country |
-|------|--------|---------|
-| PL   | Premier League | England |
-| PD   | La Liga | Spain |
-| SA   | Serie A | Italy |
-| BL1  | Bundesliga | Germany |
-| FL1  | Ligue 1 | France |
-| CL   | Champions League | Europe |
-| EL   | Europa League | Europe |
-| PPL  | Primeira Liga | Portugal |
-| DED  | Eredivisie | Netherlands |
+- **[Setup Guide](./docs/SETUP.md)** — Complete setup instructions for Docker and local development
+- **[Architecture](./docs/ARCHITECTURE.md)** — Project structure, data models, and design patterns
+- **[API Reference](./docs/API.md)** — Complete API endpoint documentation
+- **[Backend Guide](./docs/BACKEND.md)** — Backend features, stack, and alert schedule
+- **[Frontend Guide](./docs/FRONTEND.md)** — Frontend features, components, and styling
+- **[Development Guide](./docs/DEVELOPMENT.md)** — Development workflows, testing, and best practices
+- **[Deployment Guide](./docs/DEPLOYMENT.md)** — Deployment to Railway and production setup
 
----
+## Key Features
 
-## Alert Schedule
+- **📧 Email Alerts** — 1 week, 3 days, and 6 hours before matches
+- **📅 Google Calendar Integration** — Automatically add matches to your calendar
+- **⚽ Live Scores** — Real-time match status and score updates
+- **🔄 Flexible Subscriptions** — Subscribe to leagues, teams, or specific matches
+- **🎯 Personalised Dashboard** — View matches relevant to your subscriptions
+- **🏆 Challenges** — Create and join prediction challenges
+- **🌍 Multiple Leagues** — Premier League, La Liga, Bundesliga, Ligue 1, Serie A, and more
 
-| Alert | Sends when... |
-|-------|--------------|
-| `1_week` | Match is 6h 59m – 7h 1m away |
-| `3_days` | Match is 2d 23h – 3d 1h away |
-| `6_hours` | Match is 5h 30m – 6h 30m away |
+## Tech Stack
 
-The Celery beat scheduler checks every hour. The `AlertLog` table ensures no duplicate emails.
+**Backend**: FastAPI, PostgreSQL, SQLAlchemy, Celery, Redis, Google Calendar API, Resend
 
----
+**Frontend**: React 19, Vite, React Router, Axios
 
-## Key API Endpoints
+**Infrastructure**: Railway, Supabase, Docker
 
-```
-POST   /api/v1/auth/register
-POST   /api/v1/auth/login
+## Support
 
-GET    /api/v1/users/me
-PATCH  /api/v1/users/me
-GET    /api/v1/users/me/subscriptions
-POST   /api/v1/users/me/subscriptions
-DELETE /api/v1/users/me/subscriptions/{id}
-
-GET    /api/v1/football/leagues
-GET    /api/v1/football/leagues/{code}/teams
-
-POST   /api/v1/admin/sync-matches        (X-Admin-Key header)
-GET    /api/v1/admin/upcoming-alerts     (X-Admin-Key header)
-```
-
----
-
-## Development without Docker
-
-```bash
-# Create virtual env
-python -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
-
-# Start Postgres + Redis locally, then:
-uvicorn app.main:app --reload
-
-# In separate terminals:
-celery -A app.tasks.celery_app worker --loglevel=info
-celery -A app.tasks.celery_app beat --loglevel=info
-```
+- **API Docs** (Interactive): http://localhost:8000/docs
+- **Full Documentation**: See files in `/docs` folder
