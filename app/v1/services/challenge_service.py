@@ -1,4 +1,4 @@
-import re
+# import re
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -49,15 +49,25 @@ def _extract_scoreline(prediction: str) -> tuple[int, int] | None:
         (home_goals, away_goals) tuple or None if invalid format
     """
     # Limit input length to prevent ReDoS attacks
-    # Valid predictions are very short (e.g., "2-1" is 3 chars, "2 - 1" is 5 chars)
     if len(prediction) > 100:
         return None
 
-    # Match any two numbers separated by -, –, :, or whitespace around them
-    match = re.search(r"(\d+)\s*[-–:]\s*(\d+)", prediction)
-    if not match:
-        return None
-    return int(match.group(1)), int(match.group(2))
+    # Strip whitespace and validate format using string operations (no regex to avoid ReDoS)
+    prediction = prediction.strip()
+
+    # Try each valid separator
+    for sep in ["-", "–", ":"]:
+        if sep in prediction:
+            parts = prediction.split(sep, 1)  # Split only on first separator
+            if len(parts) == 2:
+                try:
+                    home = int(parts[0].strip())
+                    away = int(parts[1].strip())
+                    return (home, away)
+                except ValueError:
+                    pass
+
+    return None
 
 
 def validate_prediction(prediction: str) -> bool:
