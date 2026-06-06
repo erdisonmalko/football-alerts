@@ -2,6 +2,7 @@
 Unit tests for pure business logic — no database, no HTTP.
 These run fast and catch regressions in core domain logic.
 """
+
 from datetime import timedelta
 
 from app.v1.services.match_service import ALERT_WINDOWS
