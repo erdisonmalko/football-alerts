@@ -53,8 +53,9 @@ def _extract_scoreline(prediction: str) -> tuple[int, int] | None:
     if len(prediction) > 100:
         return None
 
-    # Match any two numbers separated by -, –, :, or whitespace around them
-    match = re.search(r"(\d+)\s*[-–:]\s*(\d+)", prediction)
+    # Match any two numbers separated by -, –, :, or literal spaces around them
+    # Using [ ]* instead of \s* to avoid ReDoS issues with overlapping whitespace patterns
+    match = re.search(r"(\d+)[ ]*[-–:][ ]*(\d+)", prediction)
     if not match:
         return None
     return int(match.group(1)), int(match.group(2))
