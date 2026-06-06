@@ -9,7 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.v1.core.config import settings
 from app.v1.db.session import get_db
 from app.v1.models.models import AlertType
-from app.v1.services.match_service import get_matches_due_for_alerts, sync_all_leagues
+from app.v1.services.match_service import (
+    get_matches_due_for_alerts,
+    sync_all_leagues,
+    update_live_and_recent_matches,
+)
 from app.v1.services.challenge_service import (
     find_challenges_to_settle,
     lock_expired_challenges,
@@ -56,12 +60,13 @@ async def trigger_dispatch():
 
 
 @router.post("/update-match-statuses", dependencies=[Depends(verify_admin_key)])
-async def trigger_update_statuses():
+async def trigger_update_statuses(db: AsyncSession = Depends(get_db)):
     """Manually trigger live match status and score update."""
-    from app.v1.tasks.alert_tasks import update_match_statuses_task
-
-    update_match_statuses_task.delay()
-    return {"status": "ok", "message": "Match status update queued"}
+    logger.info("Admin-triggered match status update started.")
+    results = await update_live_and_recent_matches()
+    logger.info(f"Match status update completed. {len(results)} matches updated.")
+    await db.commit()
+    return {"status": "ok", "message": results}
 
 
 @router.post("/sync-calendars", dependencies=[Depends(verify_admin_key)])
