@@ -2,7 +2,7 @@
 
 A full-stack football match alert application that notifies users about upcoming football matches via email and Google Calendar integration. Users subscribe to leagues, teams, or individual matches and receive alerts at configurable intervals before kickoff.
 
-**Live Demo**: [frontend-alerts.up.railway.app](https://frontend-alerts.up.railway.app)
+**Live Demo**: [frontend-alerts.up.railway.app](https://football-alerts.up.railway.app/)
 
 ## Quick Start
 
